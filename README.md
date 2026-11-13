@@ -4,8 +4,7 @@
 
 Loss Finder is a prototype built for the **Neo4j track** problem statement *"The Auto Debits Nobody Can Find"*. Upload a bank statement CSV and the app turns confusing transaction strings into a clear list of subscriptions, catches price hikes, spots free trials that quietly became paid plans, and (optionally) flags services you pay for but no longer use. For signed-in users, everything is stored per user in a **Neo4j graph database**.
 
-> **Demo video:** _add your link here_
-> **Team:** _add team member names here_
+
 
 ---
 
