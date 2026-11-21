@@ -10,12 +10,15 @@ test('reuploading a statement creates a separate import and analysis', async () 
   const originals = {
     create: importRepository.createImportBatch,
     save: importRepository.saveAnalysisSnapshot,
+    getClassifications: importRepository.getClassificationPreferences,
     transactions: transactionRepository.saveTransactionsBatch,
     detect: subscriptionDetectionService.analyzeForUser
   };
   const batches = [];
   const saved = [];
   const analyzed = [];
+  const preferences = {};
+  importRepository.getClassificationPreferences = async () => preferences;
   importRepository.createImportBatch = async (userId, batch) => {
     batches.push({ userId, ...batch });
     return batch;
@@ -43,6 +46,7 @@ test('reuploading a statement creates a separate import and analysis', async () 
     const first = await importService.processImport('usr_one', {
       bankName: 'Bank A', fileNames: ['first.csv'], transactions: [transaction, transaction]
     });
+    preferences.netflix = 'not_recurring';
     const second = await importService.processImport('usr_one', {
       bankName: 'Bank A', fileNames: ['second.csv'], transactions: [transaction]
     });
@@ -56,9 +60,12 @@ test('reuploading a statement creates a separate import and analysis', async () 
     ]);
     assert.deepEqual(saved.map(item => item.importId), [first.importId, second.importId]);
     assert.deepEqual(saved[0].subs.map(sub => sub.id), ['netflix']);
+    assert.equal(saved[0].subs[0].classificationDecision, null);
+    assert.equal(saved[1].subs[0].classificationDecision, 'not_recurring');
   } finally {
     importRepository.createImportBatch = originals.create;
     importRepository.saveAnalysisSnapshot = originals.save;
+    importRepository.getClassificationPreferences = originals.getClassifications;
     transactionRepository.saveTransactionsBatch = originals.transactions;
     subscriptionDetectionService.analyzeForUser = originals.detect;
   }

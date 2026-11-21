@@ -29,8 +29,9 @@ const importBatchSchema = z.object({
 const updateAnalysisSchema = z.object({
   reviewDecision: z.enum(['keep', 'review', 'consider_cancelling']).optional(),
   cancelled: z.boolean().optional(),
-}).refine(value => value.reviewDecision !== undefined || value.cancelled !== undefined, {
-  message: 'A decision or cancellation status is required.'
+  classificationDecision: z.enum(['subscription', 'other_recurring', 'not_recurring']).nullable().optional(),
+}).refine(value => value.reviewDecision !== undefined || value.cancelled !== undefined || value.classificationDecision !== undefined, {
+  message: 'A review, classification or cancellation status is required.'
 });
 
 module.exports = {

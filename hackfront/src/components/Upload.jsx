@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { validateBankCsvHeaders, parseCSV } from '../engine/parse';
+import { readPdfStatement } from '../engine/readPdfStatement';
+import AccountAggregatorDemo from './AccountAggregatorDemo';
 import LandingBackdrop from './landing-effects/LandingBackdrop';
 import CursorGlow from './landing-effects/CursorGlow';
 import './LandingPage.css';
@@ -69,20 +71,26 @@ export default function Upload() {
         throw new Error('This browser has reached the 10 statement files per 14 days limit. Please try again when an earlier upload expires.');
       }
       for (const file of picked) {
-        if (!file.name.toLowerCase().endsWith('.csv')) throw new Error(`${file.name}: please select a CSV file.`);
+        const extension = file.name.toLowerCase().split('.').pop();
+        if (!['csv', 'pdf'].includes(extension)) throw new Error(`${file.name}: please select a CSV or PDF statement.`);
         if (file.size > MAX_FILE_BYTES) throw new Error(`${file.name}: the 5 MB file limit was exceeded. Export a shorter date range.`);
         const key = `${file.name}:${file.size}:${file.lastModified}`;
         if (known.has(key)) continue;
-        const text = await file.text();
-        if (!validateBankCsvHeaders(text)) throw new Error(`${file.name}: Date, Narration and Debit/Amount columns are required.`);
-        const rows = parseCSV(text);
+        let rows;
+        if (extension === 'pdf') {
+          rows = await readPdfStatement(file);
+        } else {
+          const text = await file.text();
+          if (!validateBankCsvHeaders(text)) throw new Error(`${file.name}: Date, Narration and Debit/Amount columns are required.`);
+          rows = parseCSV(text);
+        }
         if (!rows.length) throw new Error(`${file.name}: no readable transactions were found.`);
         const first = rows[0].transactionDate;
         const last = rows[rows.length - 1].transactionDate;
         if ((Date.parse(last) - Date.parse(first)) / 86400000 > MAX_STATEMENT_DAYS) {
           throw new Error(`${file.name}: this statement spans more than two years. Export a shorter date range.`);
         }
-        added.push({ name: file.name, size: file.size, lastModified: file.lastModified, text, count: rows.length });
+        added.push({ name: file.name, size: file.size, lastModified: file.lastModified, transactions: rows, count: rows.length });
         known.add(key);
       }
       if (bankFiles.reduce((total, file) => total + file.count, 0) + added.reduce((total, file) => total + file.count, 0) > MAX_TOTAL_ROWS) {
@@ -130,7 +138,7 @@ export default function Upload() {
 
   async function handleAnalyze() {
     if (!bankFiles.length) {
-      setError('Please select a bank statement CSV to analyze.');
+      setError('Please select a bank statement CSV or PDF to analyze.');
       return;
     }
     if (!user && guestUploadTimes().length + bankFiles.length > MAX_FILES_PER_TWO_WEEKS) {
@@ -235,7 +243,7 @@ export default function Upload() {
             cloud_sync
           </span>
           <span>
-            Logged in as <strong>{user.email}</strong>. Analysis will sync to your Neo4j graph.
+            Logged in as <strong>{user.email}</strong>. CSV/PDF imports save to Neo4j; the AA demo stays in this browser session.
           </span>
         </div>
       )}
@@ -277,11 +285,11 @@ export default function Upload() {
             </div>
           )}
 
-          {/* Bank Statement CSV Dropzone (Required) */}
+          {/* Bank statement dropzone (Required) */}
           <div className="mb-4">
             <div className="flex items-center justify-between gap-1.5 mb-2">
               <label className="block text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] uppercase tracking-wider">
-                Bank Statement CSVs <span className="text-red-500">*</span>
+                Bank Statement CSVs or PDFs <span className="text-red-500">*</span>
               </label>
               <button
                 type="button"
@@ -303,7 +311,7 @@ export default function Upload() {
                   <li>Log into your net banking portal (e.g., HDFC, SBI, ICICI, Axis) on desktop.</li>
                   <li>Navigate to <strong>Account Statements</strong> or <strong>Historical Transactions</strong>.</li>
                   <li>Select a date range (exporting the last 6 to 12 months yields the highest accuracy).</li>
-                  <li>Click <strong>Download</strong> and choose the <strong>CSV</strong> format.</li>
+                  <li>Click <strong>Download</strong> and choose <strong>CSV</strong> or a text-based <strong>PDF</strong>. Scanned image PDFs are not supported.</li>
                 </ol>
               </div>
             )}
@@ -326,7 +334,7 @@ export default function Upload() {
                 ref={bankInputRef}
                 type="file"
                 multiple
-                accept=".csv,text/csv"
+                accept=".csv,.pdf,text/csv,application/pdf"
                 onChange={(e) => { handleBankFileSelect(e.target.files); e.target.value = ''; }}
                 className="hidden"
               />
@@ -337,12 +345,12 @@ export default function Upload() {
               {!bankFiles.length ? (
                 <div className="text-center">
                   <p className="font-medium text-sm text-[#0B1F3A] dark:text-[#E8ECF1]">
-                    <span className="text-[#0B5FD8] dark:text-[#4D9AFF] font-semibold underline">Browse</span> or drag &amp; drop one or more statement CSVs
+                    <span className="text-[#0B5FD8] dark:text-[#4D9AFF] font-semibold underline">Browse</span> or drag &amp; drop one or more statement CSVs or PDFs
                   </p>
                   <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">
-                    Supports HDFC, ICICI, SBI, Axis, Kotak, and standard bank CSVs
+                    Supports bank CSVs and text-based PDF tables with date, description and debit/credit columns
                   </p>
-                  <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Up to 5 MB and two years per CSV · 10 files every 14 days</p>
+                  <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Up to 5 MB and two years per statement · 10 files every 14 days</p>
                 </div>
               ) : (
                 <div className="w-full text-left text-xs" onClick={e => e.stopPropagation()}>
@@ -473,6 +481,7 @@ export default function Upload() {
               </p>
             </div>
           )}
+          {!loading && <AccountAggregatorDemo />}
         </div>
       )}
         </div>
@@ -480,7 +489,7 @@ export default function Upload() {
 
       {/* Footer */}
       <footer className="w-full text-center py-4 text-xs text-[#5A6B80] dark:text-[#8899AA]">
-        Guest analysis stays in your browser. Signed-in imports save transactions to Neo4j.
+        Guest analysis and the fictional AA demo stay in your browser session. Signed-in CSV/PDF imports save transactions to Neo4j.
       </footer>
     </div>
   );

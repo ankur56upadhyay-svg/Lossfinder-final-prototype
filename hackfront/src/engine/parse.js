@@ -313,7 +313,7 @@ export function parseCSV(csvText) {
     out.push({
       id: x.id,
       date: x.d,
-      transactionDate: x.d.toISOString().slice(0, 10),
+      transactionDate: `${x.d.getFullYear()}-${String(x.d.getMonth() + 1).padStart(2, '0')}-${String(x.d.getDate()).padStart(2, '0')}`,
       narration: x.narr,
       description: x.narr,
       ref: x.ref,

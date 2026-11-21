@@ -111,11 +111,16 @@ const importController = {
       const subscription = {
         ...analysis.subscriptions[index],
         ...(req.body.reviewDecision === undefined ? {} : { reviewDecision: req.body.reviewDecision }),
-        ...(req.body.cancelled === undefined ? {} : { cancelled: req.body.cancelled })
+        ...(req.body.cancelled === undefined ? {} : { cancelled: req.body.cancelled }),
+        ...(req.body.classificationDecision === undefined ? {} : { classificationDecision: req.body.classificationDecision })
       };
       const updated = [...analysis.subscriptions];
       updated[index] = subscription;
-      await importRepository.saveAnalysisSnapshot(userId, importId, updated);
+      if (req.body.classificationDecision !== undefined) {
+        await importRepository.setClassificationPreference(userId, merchantKey, req.body.classificationDecision);
+      }
+      const saved = await importRepository.saveAnalysisSnapshot(userId, importId, updated);
+      if (!saved) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Analysis not found.' } });
       res.status(200).json({ subscription });
     } catch (err) {
       next(err);

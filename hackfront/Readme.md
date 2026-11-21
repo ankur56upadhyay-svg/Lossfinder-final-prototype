@@ -2,7 +2,7 @@
 
 **Find the recurring payments hiding in your bank statement.**
 
-Loss Finder is a prototype built for the **Neo4j track** problem statement *"The Auto Debits Nobody Can Find"*. Upload a bank statement CSV and the app turns confusing transaction strings into a clear list of subscriptions, catches price hikes, spots free trials that quietly became paid plans, and (optionally) flags services you pay for but no longer use. For signed-in users, everything is stored per user in a **Neo4j graph database**.
+Loss Finder is a prototype built for the **Neo4j track** problem statement *"The Auto Debits Nobody Can Find"*. Upload a bank statement CSV or text-based PDF and the app turns confusing transaction strings into a clear list of subscriptions, catches price hikes, spots free trials that quietly became paid plans, and (optionally) flags services you pay for but no longer use. Signed-in statement imports are stored per user in a **Neo4j graph database**. An optional fictional Account Aggregator (AA) demo shows how account selection could work without connecting to a bank.
 
 > **Demo video:** _add your link here_
 > **Team:** _add team member names here_
@@ -59,8 +59,9 @@ flowchart LR
     U -. guest mode .-> E[src/engine<br/>parse + detect in the browser]
 ```
 
-- **Guest mode:** the CSV is parsed and analysed entirely in your browser (`src/engine`). Nothing is sent to the server or saved.
+- **Guest mode:** the CSV or text-based PDF is parsed and analysed entirely in your browser (`src/engine`). Nothing is sent to the server or saved.
 - **Account mode:** the parsed transactions are sent to the API, stored in Neo4j, and the server runs the detection and returns the subscriptions.
+- **AA demo:** selecting fictional accounts creates synthetic transactions in the browser and runs them through the guest analysis engine. It does not connect to an AA provider, bank, phone number, or OTP, and it is not saved to Neo4j even when signed in.
 
 ### Detection rules
 
@@ -209,9 +210,11 @@ Open **http://localhost:3000**. The Vite dev server forwards every `/api` reques
 ## Using the app
 
 1. **Register** an account, or choose **Continue as guest**.
-2. Upload your **bank statement** CSV (required).
+2. Upload one or more **bank statement** CSVs or text-based PDFs.
 3. Optionally upload a **usage log** CSV.
-4. Click **Upload & Analyze**, or click **Load sample data**.
+4. Click **Upload & Analyze**, or click **Try Demo Statement**.
+
+To try the optional AA experience without a statement, open **Account Aggregator demo** on the upload page, select one or both fictional accounts, read the consent preview, and click **Analyse fictional accounts**. This creates a separate, browser-only demo analysis; it does not import a statement or save anything to Neo4j. No real AA consent or transaction retrieval occurs.
 
 To try the demo files, upload `loss_finder_statement_12m.csv` from `sample-data/` as the statement and `loss_finder_usage_log.csv` as the usage log. The demo data contains a yearly Amazon Prime plan that is never used, two price hikes (YouTube and a gym), a trial that converts to a paid plan, and ordinary food and ride payments that should be ignored.
 
@@ -274,12 +277,12 @@ This project is a hackathon prototype. Before putting it on the internet:
 | Backend starts but says Neo4j is offline | Check `NEO4J_URI` (it should start with `neo4j+s://`), the username and password, and that the Aura instance is running. Free Aura instances pause when idle; resume it in the Aura console. |
 | Login works but the next request returns 401 | Open the app at `http://localhost:3000`, not the backend port, and keep `COOKIE_SECURE=false` on local http. |
 | `Port already in use` | Stop the other process, or change `PORT` in `backend/.env` (and the proxy target in `vite.config.js`). |
-| "No transactions" after uploading | Check that the CSV has a header row with date, narration and debit columns, and that it is the CSV export, not a PDF or Excel file. |
+| "No transactions" after uploading | Check that the CSV has a header row with date, narration and debit columns, or that the PDF has selectable text and a transaction table. Scanned image PDFs and Excel files are not supported. |
 
 ## Limitations
 
 - The data used is **synthetic**. No real bank login or real statements are needed.
-- Detection is rule-based and written for common Indian bank CSV layouts. Unusual column names or date styles may need small adjustments.
+- Detection is rule-based and written for common Indian bank CSV layouts and text-based PDF tables. Unusual layouts or date styles may need small adjustments.
 - The usage log is a manual upload in this prototype.
 - The merchant list is hand-built, so unknown merchants fall back to a cleaned-up version of the statement text.
 - Monthly payments to a person (for example rent or tuition) can look like subscriptions.
@@ -287,7 +290,7 @@ This project is a hackathon prototype. Before putting it on the internet:
 ## Future work
 
 - Automatic usage data from apps instead of a manual CSV
-- Reading statements directly (PDF, Excel, Account Aggregator)
+- Excel statement import and a live Account Aggregator integration through an eligible FIU and AA provider
 - More banks and merchants
 - Reminders before renewals and one-click cancellation help
 

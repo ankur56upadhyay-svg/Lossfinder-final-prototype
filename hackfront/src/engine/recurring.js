@@ -3,6 +3,7 @@
  */
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+import { assessPayment } from './paymentAssessment.js';
 
 function formatMonthYear(date) {
   const d = new Date(date);
@@ -139,6 +140,13 @@ export function findRecurring(transactions) {
       statusLabel = 'Ended';
     }
 
+    const assessment = assessPayment({
+      name: latest.merchant,
+      category: latest.category || 'Other',
+      narrations: collapsed.map(t => t.narration || ''),
+      amounts: prices
+    });
+
     subscriptions.push({
       id: key,
       merchantKey: key,
@@ -157,7 +165,8 @@ export function findRecurring(transactions) {
       evidence,
       history,
       explain: `${latest.merchant} charges ₹${currentPrice} per ${per === 'yr' ? 'year' : 'month'} via ${latest.mech || 'card'}.${was ? ` A price hike of +₹${currentPrice - was} was detected in historical transactions.` : ''}`,
-      lastPaymentDate: latest.date
+      lastPaymentDate: latest.date,
+      ...assessment
     });
   });
 

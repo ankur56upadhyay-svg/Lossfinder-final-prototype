@@ -31,6 +31,7 @@ test('analysis history and decisions remain separated by owner and import', asyn
     list: importRepository.getImportsByUser,
     get: importRepository.getImportById,
     save: importRepository.saveAnalysisSnapshot,
+    setClassification: importRepository.setClassificationPreference,
     detect: subscriptionDetectionService.analyzeForUser,
     priorSubscriptions: subscriptionRepository.getSubscriptionsByUser
   };
@@ -52,6 +53,13 @@ test('analysis history and decisions remain separated by owner and import', asyn
     const item = rows.get(id);
     if (item?.owner !== userId) return false;
     item.analysisJson = JSON.stringify(subs);
+    return true;
+  };
+  const preferences = {};
+  importRepository.setClassificationPreference = async (userId, key, choice) => {
+    assert.equal(userId, 'usr_one');
+    if (choice === null) delete preferences[key];
+    else preferences[key] = choice;
     return true;
   };
   subscriptionDetectionService.analyzeForUser = async (userId, options) => {
@@ -98,6 +106,28 @@ test('analysis history and decisions remain separated by owner and import', asyn
     const unchanged = await fetch(url('/imp_second/analysis'), { headers });
     assert.equal((await unchanged.json()).subs[0].reviewDecision, null);
 
+    const classify = await fetch(url('/imp_first/analysis/netflix'), {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classificationDecision: 'not_recurring' })
+    });
+    assert.equal(classify.status, 200);
+    const classified = await fetch(url('/imp_first/analysis'), { headers });
+    assert.equal((await classified.json()).subs[0].classificationDecision, 'not_recurring');
+    assert.equal(preferences.netflix, 'not_recurring');
+    const invalidClassify = await fetch(url('/imp_first/analysis/netflix'), {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classificationDecision: 'unknown-choice' })
+    });
+    assert.equal(invalidClassify.status, 400);
+    assert.equal(JSON.parse(rows.get('imp_first').analysisJson)[0].classificationDecision, 'not_recurring');
+
+    const clearClassify = await fetch(url('/imp_first/analysis/netflix'), {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classificationDecision: null })
+    });
+    assert.equal(clearClassify.status, 200);
+    assert.equal(preferences.netflix, undefined);
+
     rows.delete('imp_first');
     rows.delete('imp_second');
     const legacy = await fetch(url('/imp_legacy/analysis'), { headers });
@@ -108,6 +138,7 @@ test('analysis history and decisions remain separated by owner and import', asyn
     importRepository.getImportsByUser = originals.list;
     importRepository.getImportById = originals.get;
     importRepository.saveAnalysisSnapshot = originals.save;
+    importRepository.setClassificationPreference = originals.setClassification;
     subscriptionDetectionService.analyzeForUser = originals.detect;
     subscriptionRepository.getSubscriptionsByUser = originals.priorSubscriptions;
   }

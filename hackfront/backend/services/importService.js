@@ -154,11 +154,13 @@ const importService = {
     // 5. Save results scoped to this import so later uploads cannot change this analysis.
     try {
       const detected = await subscriptionDetectionService.analyzeForUser(userId, { importId, persist: false });
+      const classifications = await importRepository.getClassificationPreferences(userId);
       await importRepository.saveAnalysisSnapshot(userId, importId, detected.map(sub => ({
         ...sub,
         id: sub.merchantKey,
         reviewDecision: null,
-        cancelled: false
+        cancelled: false,
+        classificationDecision: classifications[sub.merchantKey] || null
       })));
     } catch (analysisErr) {
       logger.error('Subscription analysis error after import', { error: analysisErr.message });

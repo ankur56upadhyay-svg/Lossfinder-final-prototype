@@ -6,7 +6,9 @@ import { enrichTransactions } from '../engine/merchants';
 import { findRecurring } from '../engine/recurring';
 import { applyFlags } from '../engine/flags';
 import { computeTotals } from '../engine/totals';
+import { assessPayment, countsAsSubscription } from '../engine/paymentAssessment';
 import { DEMO_SUBSCRIPTIONS, SAMPLE_STATEMENT_CSV, SAMPLE_USAGE_CSV } from '../data/demoData';
+import { AA_DEMO_ACCOUNTS, buildAaDemoTransactions } from '../data/aaDemoData';
 
 const AppContext = createContext(null);
 
@@ -66,6 +68,7 @@ export function AppProvider({ children }) {
   const [subscriptions, setSubscriptions] = useState([]);
   const [bankName, setBankName] = useState('Uploaded Bank Statement');
   const [isDemo, setIsDemo] = useState(false);
+  const [demoSource, setDemoSource] = useState(null);
   const [cancelledMap, setCancelledMap] = useState({});
   const [reviewDecisions, setReviewDecisions] = useState({});
 
@@ -84,6 +87,7 @@ export function AppProvider({ children }) {
     setSubscriptions([]);
     setBankName('Uploaded Bank Statement');
     setIsDemo(false);
+    setDemoSource(null);
     setIsGuest(false);
     setCancelledMap({});
     setReviewDecisions({});
@@ -141,6 +145,7 @@ export function AppProvider({ children }) {
     let active = true;
     setIsGuest(false);
     setIsDemo(false);
+    setDemoSource(null);
     setSubscriptions([]);
     setReviewDecisions({});
     setCancelledMap({});
@@ -160,13 +165,22 @@ export function AppProvider({ children }) {
     setOpeningImportId(importId);
     try {
       const result = await api.imports.analysis(importId);
-      const subs = result.subs || [];
+      const subs = (result.subs || []).map(sub => sub.assessment ? sub : {
+        ...sub,
+        ...assessPayment({
+          name: sub.name,
+          category: sub.category,
+          narrations: sub.code ? [sub.code] : [],
+          amounts: (sub.history || []).map(point => point.a).filter(Boolean)
+        })
+      });
       setSubscriptions(subs);
       setReviewDecisions(Object.fromEntries(subs.filter(sub => sub.reviewDecision).map(sub => [sub.id, sub.reviewDecision])));
       setCancelledMap(Object.fromEntries(subs.filter(sub => sub.cancelled).map(sub => [sub.id, true])));
       setActiveImportId(importId);
       setBankName(result.import?.bankName || 'Uploaded Bank Statement');
       setIsDemo(false);
+      setDemoSource(null);
       setSelectedSubId(null);
       setView('dashboard');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -195,7 +209,7 @@ export function AppProvider({ children }) {
       return next;
     });
 
-    if (user && activeImportId) {
+    if (user && activeImportId && !isDemo) {
       try {
         await api.imports.updateAnalysis(activeImportId, subId, { cancelled });
       } catch (error) {
@@ -208,7 +222,7 @@ export function AppProvider({ children }) {
         showToast('Could not save the cancellation choice. Please retry.');
       }
     }
-  }, [user, activeImportId, showToast]);
+  }, [user, activeImportId, isDemo, showToast]);
 
   const saveReviewDecisions = useCallback(async (draft) => {
     const changes = Object.entries(draft).filter(([id, choice]) =>
@@ -219,7 +233,7 @@ export function AppProvider({ children }) {
     const saved = {};
     let failed = 0;
     for (const [id, choice] of changes) {
-      if (user) {
+      if (user && !isDemo) {
         try {
           if (!activeImportId) throw new Error('Open an analysis before saving choices.');
           await api.imports.updateAnalysis(activeImportId, id, { reviewDecision: choice });
@@ -232,7 +246,17 @@ export function AppProvider({ children }) {
     }
     setReviewDecisions(current => ({ ...current, ...saved }));
     return { saved: Object.keys(saved).length, failed };
-  }, [subscriptions, reviewDecisions, user, activeImportId]);
+  }, [subscriptions, reviewDecisions, user, isDemo, activeImportId]);
+
+  const classifyPayment = useCallback(async (id, classificationDecision) => {
+    if (!subscriptions.some(sub => sub.id === id)) throw new Error('Payment was not found in this analysis.');
+    if (user && !isDemo) {
+      if (!activeImportId) throw new Error('Open an analysis before saving your answer.');
+      await api.imports.updateAnalysis(activeImportId, id, { classificationDecision });
+    }
+    setSubscriptions(current => current.map(sub => sub.id === id ? { ...sub, classificationDecision } : sub));
+    showToast(classificationDecision === null ? 'Answer cleared.' : 'Your answer was saved.');
+  }, [subscriptions, user, isDemo, activeImportId, showToast]);
 
   // Start guest mode
   const startGuestMode = useCallback(() => {
@@ -241,6 +265,7 @@ export function AppProvider({ children }) {
     setSubscriptions([]);
     setBankName('Bank Statement');
     setIsDemo(false);
+    setDemoSource(null);
     setCancelledMap({});
     setReviewDecisions({});
     setActiveImportId(null);
@@ -250,6 +275,7 @@ export function AppProvider({ children }) {
   const loadSampleData = useCallback(() => {
     setIsGuest(true);
     setIsDemo(true);
+    setDemoSource('statement');
     setBankName('Demo Bank (Sample Statement)');
     setSubscriptions(DEMO_SUBSCRIPTIONS);
     setReviewDecisions({});
@@ -258,10 +284,28 @@ export function AppProvider({ children }) {
     showToast('Loaded sample subscription profile');
   }, [showToast]);
 
-  // Analyze CSV statement (either Guest or Authenticated)
+  const loadAccountAggregatorDemo = useCallback((accountIds) => {
+    const rawRows = buildAaDemoTransactions(accountIds);
+    const flagged = applyFlags(findRecurring(enrichTransactions(rawRows)), []);
+    const bankCount = accountIds.length;
+    setIsGuest(!user);
+    setIsDemo(true);
+    setDemoSource('aa');
+    setBankName(`AA demo - ${bankCount} fictional ${bankCount === 1 ? 'account' : 'accounts'}`);
+    setSubscriptions(flagged);
+    setReviewDecisions({});
+    setCancelledMap({});
+    setActiveImportId(null);
+    setSelectedSubId(null);
+    setView('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast('AA demo loaded with fictional transactions. No bank was connected.');
+  }, [user, showToast]);
+
+  // Analyze normalized statement rows from CSV or PDF (either Guest or Authenticated)
   const analyzeStatement = useCallback(async (bankFiles, usageCsvText) => {
     const files = Array.isArray(bankFiles) ? bankFiles : [{ name: 'Statement', text: bankFiles }];
-    const parsed = files.map(file => ({ name: file.name, transactions: parseCSV(file.text) }));
+    const parsed = files.map(file => ({ name: file.name, transactions: file.transactions || parseCSV(file.text) }));
     const seen = new Set();
     const rawTxns = parsed.flatMap((file, sourceFileIndex) => file.transactions.map(tx => ({ ...tx, sourceFileIndex }))).filter(tx => {
       const ref = tx.ref?.trim();
@@ -310,6 +354,7 @@ export function AppProvider({ children }) {
       setReviewDecisions({});
       setBankName(detectedBank);
       setIsDemo(false);
+      setDemoSource(null);
       setView('dashboard');
       showToast('Analysis complete! All data stored ephemerally.');
     }
@@ -324,6 +369,9 @@ export function AppProvider({ children }) {
   const closeAuthModal = useCallback(() => {
     setAuthModalOpen(false);
   }, []);
+
+  const visibleSubscriptions = subscriptions.filter(countsAsSubscription);
+  const paymentCandidates = subscriptions.filter(sub => sub.assessment === 'needs_review');
 
   return (
     <AppContext.Provider
@@ -357,15 +405,20 @@ export function AppProvider({ children }) {
         navigateTo,
         isGuest,
         startGuestMode,
-        subscriptions,
+        subscriptions: visibleSubscriptions,
+        paymentCandidates,
+        classifyPayment,
         setSubscriptions,
         bankName,
         isDemo,
+        demoSource,
         cancelledMap,
         markCancelled,
         reviewDecisions,
         saveReviewDecisions,
         loadSampleData,
+        aaDemoAccounts: AA_DEMO_ACCOUNTS,
+        loadAccountAggregatorDemo,
         analyzeStatement,
         authModalOpen,
         authModalMode,

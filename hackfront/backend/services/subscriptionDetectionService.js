@@ -3,6 +3,7 @@ const usageRepository = require('../repositories/usageRepository');
 const subscriptionRepository = require('../repositories/subscriptionRepository');
 const { findMerchant, determineMechanism } = require('../utils/merchants');
 const logger = require('../utils/logger');
+const { assessPayment } = require('../utils/paymentAssessment');
 
 const DAY = 86400000;
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -348,6 +349,13 @@ const subscriptionDetectionService = {
         evidence: ev.slice(0, 4),
         explain: explain
       };
+
+      Object.assign(subRecord, assessPayment({
+        name: g.merchant.canonicalName,
+        category: g.merchant.category,
+        narrations: effectiveKept.map(c => c.narration || ''),
+        amounts
+      }));
 
       detectedSubs.push(subRecord);
     }

@@ -12,7 +12,8 @@ export default function Navbar() {
     openDeleteAccountModal,
     openAuthModal,
     subscriptions,
-    isGuest
+    isGuest,
+    isDemo
   } = useApp();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,7 +22,7 @@ export default function Navbar() {
     ...(user ? [['history', 'My analyses']] : []),
     ...((user || subscriptions.length) ? [['upload', 'New Statement']] : []),
     ...(subscriptions.length && view !== 'upload' && view !== 'history'
-      ? [['dashboard', 'Dashboard'], ['annual', 'Annual View'], ['review', 'Review & renewals'], ['saved', 'Saved decisions'], ['guide', 'Cancel guides']]
+      ? [['dashboard', 'Dashboard'], ['annual', 'Annual View'], ...(!isDemo ? [['review', 'Review & renewals'], ['saved', 'Saved decisions']] : []), ['guide', 'Cancel guides']]
       : [])
   ];
 
@@ -76,14 +77,14 @@ export default function Navbar() {
               >
                 Annual View
               </button>
-              <button type="button" onClick={() => navigateTo('review')}
+              {!isDemo && <button type="button" onClick={() => navigateTo('review')}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${view === 'review' ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]' : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'}`}>
                 Review &amp; renewals
-              </button>
-              <button type="button" onClick={() => navigateTo('saved')}
+              </button>}
+              {!isDemo && <button type="button" onClick={() => navigateTo('saved')}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${view === 'saved' ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]' : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'}`}>
                 Saved decisions
-              </button>
+              </button>}
               <button
                 type="button"
                 onClick={() => navigateTo('guide')}
@@ -152,7 +153,7 @@ export default function Navbar() {
                 >
                   <div className="px-4 py-2 border-b border-[#E2E5EA] dark:border-[#2A3040]">
                     <p className="font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] truncate">{user.email}</p>
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Neo4j Synchronized</p>
+                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">{isDemo ? 'Viewing local demo' : 'Neo4j Synchronized'}</p>
                   </div>
                   <button
                     type="button"

@@ -122,6 +122,47 @@ const importRepository = {
     }
   },
 
+  async getClassificationPreferences(userId) {
+    const session = getSession(neo4j.session.READ);
+    try {
+      const result = await session.run(
+        `MATCH (u:User { userId: $userId }) RETURN u.paymentClassifications AS saved`,
+        { userId }
+      );
+      const saved = result.records[0]?.get('saved');
+      if (!saved) return Object.create(null);
+      const parsed = JSON.parse(saved);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? Object.assign(Object.create(null), parsed) : Object.create(null);
+    } finally {
+      await session.close();
+    }
+  },
+
+  async setClassificationPreference(userId, merchantKey, choice) {
+    const session = getSession(neo4j.session.WRITE);
+    try {
+      return await session.executeWrite(async tx => {
+        const found = await tx.run(
+          `MATCH (u:User { userId: $userId }) RETURN u.paymentClassifications AS saved`,
+          { userId }
+        );
+        if (!found.records.length) return false;
+        const saved = found.records[0].get('saved');
+        const preferences = saved ? Object.assign(Object.create(null), JSON.parse(saved)) : Object.create(null);
+        if (choice === null) delete preferences[merchantKey];
+        else preferences[merchantKey] = choice;
+        await tx.run(
+          `MATCH (u:User { userId: $userId }) SET u.paymentClassifications = $saved`,
+          { userId, saved: JSON.stringify(preferences) }
+        );
+        return true;
+      });
+    } finally {
+      await session.close();
+    }
+  },
+
   async saveAnalysisSnapshot(userId, importId, subscriptions) {
     const session = getSession(neo4j.session.WRITE);
     try {

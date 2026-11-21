@@ -2,15 +2,18 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { computeTotals } from '../engine/totals';
 import CountUp from './CountUp';
+import PaymentReviewPanel from './PaymentReviewPanel';
 
 export default function Dashboard() {
   const {
     subscriptions,
     bankName,
     isDemo,
+    demoSource,
     cancelledMap,
     navigateTo,
-    user
+    user,
+    paymentCandidates
   } = useApp();
 
   const totals = computeTotals(subscriptions);
@@ -22,15 +25,16 @@ export default function Dashboard() {
   if (!subscriptions.length) {
     return (
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <PaymentReviewPanel />
         <div className="af-card flex flex-col items-center justify-center text-center py-16 px-6 shadow-sm">
           <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-[#0B5FD8] dark:text-[#4D9AFF] flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-4xl">search_off</span>
           </div>
           <h3 className="text-xl font-bold text-[#0B1F3A] dark:text-[#E8ECF1] mb-2">
-            No recurring payments found
+            {paymentCandidates?.length ? 'No confirmed subscriptions yet' : 'No recurring payments found'}
           </h3>
           <p className="text-sm text-[#5A6B80] dark:text-[#8899AA] max-w-md mb-6 leading-relaxed">
-            We analyzed your statement but could not detect standing instructions, recurring cycles, or active subscriptions.
+            {paymentCandidates?.length ? 'Review the possible recurring payments above to include any subscriptions in your totals.' : 'We analyzed your statement but could not detect standing instructions, recurring cycles, or active subscriptions.'}
           </p>
           <button
             type="button"
@@ -84,12 +88,12 @@ export default function Dashboard() {
           </div>
           <p className="text-sm text-[#5A6B80] dark:text-[#8899AA] mt-1">
             {isDemo ? (
-              'Viewing sample recurring auto-debit profile'
+              demoSource === 'aa' ? 'Viewing fictional Account Aggregator transactions. No bank is connected.' : 'Viewing sample recurring auto-debit profile'
             ) : (
               <>
                 Statement source:{' '}
                 <strong className="text-[#0B1F3A] dark:text-[#E8ECF1]">{bankName}</strong>
-                {user && (
+                {user && !isDemo && (
                   <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     Neo4j Synchronized
@@ -120,13 +124,15 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <PaymentReviewPanel />
+
       {/* Top 3 Distinct Metric Cards with proper gap spacing */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
         {/* Card 1: Total Yearly Spend */}
         <div className="af-card af-stat-blue flex flex-col justify-between p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA]">
-              TOTAL YEARLY SPEND
+              ESTIMATED YEARLY SUBSCRIPTION SPEND
             </span>
             <span className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-[#0B5FD8] dark:text-[#4D9AFF] flex items-center justify-center">
               <span className="material-symbols-outlined text-xl">payments</span>
@@ -208,7 +214,7 @@ export default function Dashboard() {
       <div className="af-card p-0 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-[#E2E5EA] dark:border-[#2A3040] flex items-center justify-between">
           <h2 className="font-bold text-base text-[#0B1F3A] dark:text-[#E8ECF1]">
-            Detected Subscriptions
+            Subscription Results
           </h2>
           <span className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
             {subscriptions.length} active &amp; past debits
