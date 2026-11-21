@@ -59,8 +59,9 @@ export const api = {
       method: 'POST'
     }),
     me: () => request('/api/auth/me'),
-    deleteData: () => request('/api/auth/me/data', {
-      method: 'DELETE'
+    deleteData: (password) => request('/api/auth/me/data', {
+      method: 'DELETE',
+      body: JSON.stringify({ password, confirmation: 'DELETE' })
     })
   },
 

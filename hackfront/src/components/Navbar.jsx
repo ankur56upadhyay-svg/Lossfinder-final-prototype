@@ -9,6 +9,7 @@ export default function Navbar() {
     toggleTheme,
     user,
     logout,
+    openDeleteAccountModal,
     openAuthModal,
     subscriptions,
     bankName,
@@ -150,10 +151,19 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={logout}
-                    className="w-full text-left px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 text-[#0B1F3A] dark:text-[#E8ECF1] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-sm">logout</span>
                     Sign out
+                  </button>
+                  <div className="my-1 border-t border-[#E2E5EA] dark:border-[#2A3040]" />
+                  <button
+                    type="button"
+                    onClick={openDeleteAccountModal}
+                    className="w-full text-left px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">delete_forever</span>
+                    Delete account
                   </button>
                 </div>
               )}

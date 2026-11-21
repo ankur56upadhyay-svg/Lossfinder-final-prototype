@@ -71,6 +71,20 @@ export function useLossFinderApi() {
     }
   }, []);
 
+  const deleteAccount = useCallback(async (password) => {
+    setApiLoading(true);
+    setApiError(null);
+    try {
+      await api.auth.deleteData(password);
+      setUser(null);
+    } catch (err) {
+      setApiError(err.message || 'Could not delete your account');
+      throw err;
+    } finally {
+      setApiLoading(false);
+    }
+  }, []);
+
   const importToNeo4j = useCallback(async (bankName, transactions) => {
     setApiLoading(true);
     setApiError(null);
@@ -140,6 +154,7 @@ export function useLossFinderApi() {
     login,
     register,
     logout,
+    deleteAccount,
     importToNeo4j,
     fetchSubscriptions,
     updateSubscriptionStatus

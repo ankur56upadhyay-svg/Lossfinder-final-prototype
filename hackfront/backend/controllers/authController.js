@@ -145,7 +145,26 @@ const authController = {
   async deleteUserData(req, res, next) {
     try {
       const userId = req.user.userId;
-      await userRepository.deleteUserData(userId);
+      const credentials = await userRepository.findCredentialsById(userId);
+      if (!credentials) {
+        return res.status(404).json({
+          error: { code: 'USER_NOT_FOUND', message: 'User account not found.' }
+        });
+      }
+
+      const passwordMatches = await bcrypt.compare(req.body.password, credentials.passwordHash);
+      if (!passwordMatches) {
+        return res.status(401).json({
+          error: { code: 'INVALID_CREDENTIALS', message: 'Incorrect password.' }
+        });
+      }
+
+      const deleted = await userRepository.deleteUserData(userId);
+      if (!deleted) {
+        return res.status(404).json({
+          error: { code: 'USER_NOT_FOUND', message: 'User account not found.' }
+        });
+      }
 
       res.clearCookie('af_token', {
         httpOnly: true,

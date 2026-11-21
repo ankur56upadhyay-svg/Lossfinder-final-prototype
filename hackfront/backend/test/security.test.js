@@ -173,3 +173,56 @@ test('production enforces secure cookies and normalizes the frontend origin', ()
     origin: 'https://example.com'
   });
 });
+
+test('account deletion requires a signed-in user, confirmation and the correct password', async () => {
+  const url = `${baseUrl}/api/auth/me/data`;
+  const token = jwt.sign({ userId: 'usr_delete_test', email: 'delete@example.com' }, process.env.JWT_SECRET);
+  const headers = {
+    Origin: 'http://localhost:3000',
+    Cookie: `af_token=${token}`,
+    'Content-Type': 'application/json'
+  };
+  const originalFind = userRepository.findCredentialsById;
+  const originalDelete = userRepository.deleteUserData;
+  const deletedIds = [];
+  userRepository.findCredentialsById = async () => ({
+    passwordHash: await bcrypt.hash('CorrectPassword123!', 4)
+  });
+  userRepository.deleteUserData = async userId => {
+    deletedIds.push(userId);
+    return true;
+  };
+
+  try {
+    const guest = await fetch(url, {
+      method: 'DELETE',
+      headers: { Origin: 'http://localhost:3000', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'CorrectPassword123!', confirmation: 'DELETE' })
+    });
+    assert.equal(guest.status, 401);
+
+    const missingConfirmation = await fetch(url, {
+      method: 'DELETE', headers,
+      body: JSON.stringify({ password: 'CorrectPassword123!' })
+    });
+    assert.equal(missingConfirmation.status, 400);
+
+    const wrongPassword = await fetch(url, {
+      method: 'DELETE', headers,
+      body: JSON.stringify({ password: 'WrongPassword123!', confirmation: 'DELETE' })
+    });
+    assert.equal(wrongPassword.status, 401);
+    assert.deepEqual(deletedIds, []);
+
+    const success = await fetch(url, {
+      method: 'DELETE', headers,
+      body: JSON.stringify({ password: 'CorrectPassword123!', confirmation: 'DELETE' })
+    });
+    assert.equal(success.status, 200);
+    assert.deepEqual(deletedIds, ['usr_delete_test']);
+    assert.match(success.headers.get('set-cookie'), /af_token=;/);
+  } finally {
+    userRepository.findCredentialsById = originalFind;
+    userRepository.deleteUserData = originalDelete;
+  }
+});

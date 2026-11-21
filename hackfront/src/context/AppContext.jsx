@@ -45,6 +45,7 @@ export function AppProvider({ children }) {
     login,
     register,
     logout:apiLogout,
+    deleteAccount:apiDeleteAccount,
     importToNeo4j,
     fetchSubscriptions,
     updateSubscriptionStatus
@@ -67,12 +68,13 @@ export function AppProvider({ children }) {
   // Auth Modal state
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
+  const [deleteAccountModalOpen, setDeleteAccountModalOpen] = useState(false);
+  const openDeleteAccountModal = useCallback(() => setDeleteAccountModalOpen(true), []);
+  const closeDeleteAccountModal = useCallback(() => setDeleteAccountModalOpen(false), []);
 
   // Toast notification state
   const [toast, setToast] = useState(null);
-  const logout = useCallback(async () => {
-    await apiLogout();
-
+  const clearAccountView = useCallback(() => {
     setView('upload');
     setSelectedSubId(null);
     setSubscriptions([]);
@@ -82,7 +84,13 @@ export function AppProvider({ children }) {
     setCancelledMap({});
     setReviewDecisions({});
     setAuthModalOpen(false);
-}, [apiLogout]);
+    setDeleteAccountModalOpen(false);
+  }, []);
+
+  const logout = useCallback(async () => {
+    await apiLogout();
+    clearAccountView();
+  }, [apiLogout, clearAccountView]);
 
   const showToast = useCallback((message, options = {}) => {
     setToast({
@@ -96,6 +104,12 @@ export function AppProvider({ children }) {
   const hideToast = useCallback(() => {
     setToast(null);
   }, []);
+
+  const deleteAccount = useCallback(async (password) => {
+    await apiDeleteAccount(password);
+    clearAccountView();
+    showToast('Your account and saved data were deleted.');
+  }, [apiDeleteAccount, clearAccountView, showToast]);
 
   // When user logs in, if they already have saved data in Neo4j, fetch it
   // useEffect(() => {
@@ -117,10 +131,12 @@ export function AppProvider({ children }) {
   // Restore user's saved data after login or page reload
 useEffect(() => {
   if (user) {
+    let active = true;
     setIsGuest(false);
 
     fetchSubscriptions()
       .then(subs => {
+        if (!active) return;
         if (subs && subs.length > 0) {
         setSubscriptions(subs);
         setReviewDecisions(Object.fromEntries(subs.filter(s => s.reviewDecision).map(s => [s.id, s.reviewDecision])));
@@ -137,8 +153,9 @@ useEffect(() => {
         }
       })
       .catch(err => {
-        console.warn('Could not load user subscriptions:', err);
+        if (active) console.warn('Could not load user subscriptions:', err);
       });
+    return () => { active = false; };
   }
 }, [user, fetchSubscriptions]);
 
@@ -294,6 +311,10 @@ useEffect(() => {
         login,
         register,
         logout,
+        deleteAccount,
+        deleteAccountModalOpen,
+        openDeleteAccountModal,
+        closeDeleteAccountModal,
         view,
         setView,
         selectedSubId,

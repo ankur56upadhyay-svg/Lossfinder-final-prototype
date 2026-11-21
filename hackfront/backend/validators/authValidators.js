@@ -10,7 +10,13 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+const deleteAccountSchema = z.object({
+  password: z.string().min(1, 'Password is required').max(100),
+  confirmation: z.literal('DELETE'),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
+  deleteAccountSchema,
 };

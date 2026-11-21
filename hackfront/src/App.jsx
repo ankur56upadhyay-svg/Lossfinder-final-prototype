@@ -10,6 +10,7 @@ import Toast from './components/Toast'
 import AuthModal from './components/AuthModal'
 import ReviewCentre from './components/ReviewCentre'
 import SavedDecisions from './components/SavedDecisions'
+import DeleteAccountModal from './components/DeleteAccountModal'
 
 export default function App() {
   const { view, loadingUser, user, openAuthModal, navigateTo } = useApp()
@@ -68,6 +69,7 @@ export default function App() {
       </div>
       <Toast />
       <AuthModal />
+      <DeleteAccountModal />
     </div>
   )
 }
