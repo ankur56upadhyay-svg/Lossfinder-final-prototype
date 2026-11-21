@@ -104,7 +104,7 @@ const importRepository = {
     try {
       const result = await session.run(
         `MATCH (u:User { userId: $userId })-[:CREATED_IMPORT]->(i:ImportBatch { importId: $importId })
-         OPTIONAL MATCH (t:Transaction)-[:IN_IMPORT]->(i)
+         OPTIONAL MATCH (u)-[:MADE]->(t:Transaction)-[:IN_IMPORT]->(i)
          DETACH DELETE t, i
          RETURN count(i) AS deletedCount`,
         { userId, importId }

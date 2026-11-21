@@ -1,5 +1,4 @@
 const express = require('express');
-const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -16,36 +15,24 @@ const healthRoutes = require('./routes/health.routes');
 
 const app = express();
 
-// Security headers with relaxed contentSecurityPolicy for CDN tailwind & fonts
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", env.FRONTEND_ORIGIN, "http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:3000"]
-    }
-  },
-  crossOriginEmbedderPolicy: false
-}));
+// Render terminates HTTPS at its proxy. Trust only the immediate proxy hop.
+if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
-// CORS configuration
-const allowedOrigins = [
-  env.FRONTEND_ORIGIN,
-  'http://localhost:8000',
-  'http://127.0.0.1:8000',
-  'http://localhost:3000'
-].filter(Boolean);
+app.use(helmet());
+
+const allowedOrigins = new Set(env.NODE_ENV === 'production'
+  ? [env.FRONTEND_ORIGIN]
+  : [env.FRONTEND_ORIGIN, 'http://localhost:8000', 'http://127.0.0.1:8000', 'http://localhost:3000']);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or same-origin static file requests)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.has(origin)) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive in development
+    const error = new Error('Request origin not allowed.');
+    error.status = 403;
+    error.code = 'ORIGIN_FORBIDDEN';
+    return callback(error);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -56,9 +43,33 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static frontend files from project root
-const frontendPath = path.resolve(__dirname, '..');
-app.use(express.static(frontendPath));
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
+// Browsers send Origin on writes. Referer is a fallback for clients that omit it.
+app.use('/api', (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+  let origin = req.get('origin');
+  if (!origin) {
+    const referer = req.get('referer');
+    try {
+      origin = referer ? new URL(referer).origin : null;
+    } catch (_) {
+      origin = null;
+    }
+  }
+
+  if (origin && allowedOrigins.has(origin)) return next();
+  return res.status(403).json({
+    error: {
+      code: 'ORIGIN_FORBIDDEN',
+      message: 'Request origin not allowed.'
+    }
+  });
+});
 
 // API Routes
 app.use('/api/health', healthRoutes);

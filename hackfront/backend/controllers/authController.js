@@ -59,8 +59,7 @@ const authController = {
           userId: user.userId,
           email: user.email,
           createdAt: user.createdAt
-        },
-        token
+        }
       });
     } catch (err) {
       next(err);
@@ -101,8 +100,7 @@ const authController = {
           userId: user.userId,
           email: user.email,
           createdAt: user.createdAt
-        },
-        token
+        }
       });
     } catch (err) {
       next(err);

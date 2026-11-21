@@ -65,8 +65,8 @@ const usageRepository = {
 
       const result = await session.run(
         `MATCH (u:User { userId: $userId })-[:RECORDED_USAGE]->(ue:UsageEvent)
-         OPTIONAL MATCH (ue)-[:RELATES_TO]->(m:Merchant)
          WHERE ${whereClause}
+         OPTIONAL MATCH (ue)-[:RELATES_TO]->(m:Merchant)
          RETURN ue.usageEventId AS usageEventId,
                 ue.merchantKey AS merchantKey,
                 ue.eventDate AS eventDate,

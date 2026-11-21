@@ -44,8 +44,7 @@ const transactionRepository = {
       }));
 
       const query = `
-        MATCH (u:User { userId: $userId })
-        MATCH (i:ImportBatch { importId: $importId })
+        MATCH (u:User { userId: $userId })-[:CREATED_IMPORT]->(i:ImportBatch { importId: $importId })
         UNWIND $rows AS row
         MERGE (m:Merchant { merchantKey: row.merchantKey })
           ON CREATE SET m.canonicalName = row.canonicalName,
@@ -82,7 +81,7 @@ const transactionRepository = {
         now
       });
 
-      return result.records[0].get('createdCount').toNumber();
+      return result.records.length ? result.records[0].get('createdCount').toNumber() : 0;
     } finally {
       await session.close();
     }
@@ -135,8 +134,8 @@ const transactionRepository = {
 
       const query = `
         MATCH ${matchClause}
-        OPTIONAL MATCH (t)-[:PAID_TO]->(m:Merchant)
         ${whereStr}
+        OPTIONAL MATCH (t)-[:PAID_TO]->(m:Merchant)
         RETURN t.transactionId AS transactionId,
                t.transactionDate AS transactionDate,
                t.description AS description,
