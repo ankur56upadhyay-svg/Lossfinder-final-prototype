@@ -62,6 +62,7 @@ export function AppProvider({ children }) {
   const [bankName, setBankName] = useState('Uploaded Bank Statement');
   const [isDemo, setIsDemo] = useState(false);
   const [cancelledMap, setCancelledMap] = useState({});
+  const [reviewDecisions, setReviewDecisions] = useState({});
 
   // Auth Modal state
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -79,6 +80,7 @@ export function AppProvider({ children }) {
     setIsDemo(false);
     setIsGuest(false);
     setCancelledMap({});
+    setReviewDecisions({});
     setAuthModalOpen(false);
 }, [apiLogout]);
 
@@ -120,7 +122,8 @@ useEffect(() => {
     fetchSubscriptions()
       .then(subs => {
         if (subs && subs.length > 0) {
-          setSubscriptions(subs);
+        setSubscriptions(subs);
+        setReviewDecisions(Object.fromEntries(subs.filter(s => s.reviewDecision).map(s => [s.id, s.reviewDecision])));
           setBankName('Neo4j Graph Database');
           setIsDemo(false);
 
@@ -128,6 +131,8 @@ useEffect(() => {
           setView('dashboard');
         } else {
           // New user without saved data
+          setSubscriptions([]);
+          setReviewDecisions({});
           setView('upload');
         }
       })
@@ -166,6 +171,29 @@ useEffect(() => {
     }
   }, [user, updateSubscriptionStatus]);
 
+  const saveReviewDecisions = useCallback(async (draft) => {
+    const changes = Object.entries(draft).filter(([id, choice]) =>
+      subscriptions.some(sub => sub.id === id) && choice !== reviewDecisions[id]
+    );
+    if (!changes.length) return { saved: 0, failed: 0 };
+
+    const saved = {};
+    let failed = 0;
+    for (const [id, choice] of changes) {
+      if (user) {
+        try {
+          await updateSubscriptionStatus(id, undefined, undefined, choice);
+        } catch (error) {
+          failed++;
+          continue;
+        }
+      }
+      saved[id] = choice;
+    }
+    setReviewDecisions(current => ({ ...current, ...saved }));
+    return { saved: Object.keys(saved).length, failed };
+  }, [subscriptions, reviewDecisions, user, updateSubscriptionStatus]);
+
   // Start guest mode
   const startGuestMode = useCallback(() => {
     setIsGuest(true);
@@ -174,6 +202,7 @@ useEffect(() => {
     setBankName('Bank Statement');
     setIsDemo(false);
     setCancelledMap({});
+    setReviewDecisions({});
   }, []);
 
   // Load sample data
@@ -182,19 +211,29 @@ useEffect(() => {
     setIsDemo(true);
     setBankName('Demo Bank (Sample Statement)');
     setSubscriptions(DEMO_SUBSCRIPTIONS);
+    setReviewDecisions({});
     setView('dashboard');
     showToast('Loaded sample subscription profile');
   }, [showToast]);
 
   // Analyze CSV statement (either Guest or Authenticated)
-  const analyzeStatement = useCallback(async (bankCsvText, usageCsvText) => {
-    // 1. Client-side parse bank statement
-    const rawTxns = parseCSV(bankCsvText);
+  const analyzeStatement = useCallback(async (bankFiles, usageCsvText) => {
+    const files = Array.isArray(bankFiles) ? bankFiles : [{ name: 'Statement', text: bankFiles }];
+    const parsed = files.map(file => ({ name: file.name, transactions: parseCSV(file.text) }));
+    const seen = new Set();
+    const rawTxns = parsed.flatMap(file => file.transactions).filter(tx => {
+      const ref = tx.ref?.trim();
+      if (!ref) return true;
+      const key = [tx.transactionDate, tx.direction, tx.amount, tx.deposit, tx.narration?.trim().toLowerCase(), ref].join('|');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     if (!rawTxns || !rawTxns.length) {
       throw new Error('We could not read any transactions from this statement. Please check the file format.');
     }
 
-    const detectedBank = rawTxns.bank || 'Uploaded Bank Statement';
+    const detectedBank = files.length > 1 ? `${files.length} bank statements` : (parsed[0]?.transactions.bank || files[0]?.name || 'Uploaded Bank Statement');
 
     // 2. Client-side parse optional usage log if provided
     let usageEvents = [];
@@ -211,23 +250,19 @@ useEffect(() => {
       // Authenticated Mode: Send normalized transactions to Neo4j
       try {
         const importRes = await importToNeo4j(detectedBank, enriched);
-        setSubscriptions(importRes.subscriptions && importRes.subscriptions.length ? importRes.subscriptions : flagged);
+        setSubscriptions(importRes.subscriptions || []);
+        setReviewDecisions(Object.fromEntries((importRes.subscriptions || []).filter(s => s.reviewDecision).map(s => [s.id, s.reviewDecision])));
         setBankName(detectedBank);
         setIsDemo(false);
         setView('dashboard');
-        showToast(`Saved to Neo4j: ${importRes.import?.acceptedCount || enriched.length} transactions stored.`);
+        showToast(`Saved to Neo4j: ${importRes.import?.acceptedCount ?? enriched.length} new transactions stored.`);
       } catch (err) {
-        // Fallback to local flagged if backend fails
-        console.warn('Neo4j import failed, falling back to local memory:', err);
-        setSubscriptions(flagged);
-        setBankName(detectedBank);
-        setIsDemo(false);
-        setView('dashboard');
-        showToast('Processed locally. Neo4j connection offline.');
+        throw new Error(`Could not complete the saved import: ${err.message}. Please check your account before retrying.`);
       }
     } else {
       // Guest Mode: Store strictly in memory, zero network/db writes
       setSubscriptions(flagged);
+      setReviewDecisions({});
       setBankName(detectedBank);
       setIsDemo(false);
       setView('dashboard');
@@ -272,6 +307,8 @@ useEffect(() => {
         isDemo,
         cancelledMap,
         markCancelled,
+        reviewDecisions,
+        saveReviewDecisions,
         loadSampleData,
         analyzeStatement,
         authModalOpen,

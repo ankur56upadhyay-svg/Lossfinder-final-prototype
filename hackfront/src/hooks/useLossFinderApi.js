@@ -119,9 +119,9 @@ export function useLossFinderApi() {
     }
   }, []);
 
-  const updateSubscriptionStatus = useCallback(async (id, status, notes) => {
+  const updateSubscriptionStatus = useCallback(async (id, status, notes, reviewDecision) => {
     try {
-      const res = await api.subscriptions.update(id, { status, notes });
+      const res = await api.subscriptions.update(id, { status, notes, reviewDecision });
       return res.subscription;
     } catch (err) {
       console.error('Error updating subscription:', err);

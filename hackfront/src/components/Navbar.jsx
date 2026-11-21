@@ -80,6 +80,14 @@ export default function Navbar() {
               >
                 Annual View
               </button>
+              <button type="button" onClick={() => navigateTo('review')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${view === 'review' ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]' : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'}`}>
+                Review &amp; renewals
+              </button>
+              <button type="button" onClick={() => navigateTo('saved')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${view === 'saved' ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]' : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'}`}>
+                Saved decisions
+              </button>
               <button
                 type="button"
                 onClick={() => navigateTo('guide')}

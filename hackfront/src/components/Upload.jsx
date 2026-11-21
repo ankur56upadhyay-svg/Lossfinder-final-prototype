@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { validateBankCsvHeaders } from '../engine/parse';
-import { SAMPLE_STATEMENT_CSV, SAMPLE_USAGE_CSV } from '../data/demoData';
+import { validateBankCsvHeaders, parseCSV } from '../engine/parse';
 
 export default function Upload() {
   const {
@@ -18,8 +17,7 @@ export default function Upload() {
   const [showUploadBoxes, setShowUploadBoxes] = useState(isGuest || !!user);
 
   // File state
-  const [bankFile, setBankFile] = useState(null);
-  const [bankCsvText, setBankCsvText] = useState('');
+  const [bankFiles, setBankFiles] = useState([]);
   const [usageFile, setUsageFile] = useState(null);
   const [usageCsvText, setUsageCsvText] = useState('');
 
@@ -40,28 +38,29 @@ export default function Upload() {
   const usageInputRef = useRef(null);
 
   // File handlers
-  function handleBankFileSelect(file) {
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setError('Please upload a .csv file for the bank statement.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target.result;
-      if (!validateBankCsvHeaders(content)) {
-        setError('Invalid CSV format: Statement must include Date, Narration/Description, and Debit/Amount columns.');
-        return;
+  async function handleBankFileSelect(files) {
+    const picked = Array.from(files || []);
+    if (!picked.length) return;
+    try {
+      const known = new Set(bankFiles.map(item => `${item.name}:${item.size}:${item.lastModified}`));
+      const added = [];
+      for (const file of picked) {
+        if (!file.name.toLowerCase().endsWith('.csv')) throw new Error(`${file.name}: please select a CSV file.`);
+        if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name}: the 5 MB file limit was exceeded.`);
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        if (known.has(key)) continue;
+        const text = await file.text();
+        if (!validateBankCsvHeaders(text)) throw new Error(`${file.name}: Date, Narration and Debit/Amount columns are required.`);
+        const rows = parseCSV(text);
+        if (!rows.length) throw new Error(`${file.name}: no readable transactions were found.`);
+        added.push({ name: file.name, size: file.size, lastModified: file.lastModified, text, count: rows.length });
+        known.add(key);
       }
+      setBankFiles(previous => [...previous, ...added]);
       setError('');
-      setBankFile(file);
-      setBankCsvText(content);
-    };
-    reader.onerror = () => {
-      setError('Failed to read the statement file. Please try again.');
-    };
-    reader.readAsText(file);
+    } catch (err) {
+      setError(err.message || 'Could not read the selected statements.');
+    }
   }
 
   function handleUsageFileSelect(file) {
@@ -80,10 +79,9 @@ export default function Upload() {
     reader.readAsText(file);
   }
 
-  function clearBankFile(e) {
+  function clearBankFile(e, name) {
     e?.stopPropagation();
-    setBankFile(null);
-    setBankCsvText('');
+    setBankFiles(previous => previous.filter(file => file.name !== name));
     if (bankInputRef.current) bankInputRef.current.value = '';
   }
 
@@ -95,7 +93,7 @@ export default function Upload() {
   }
 
   async function handleAnalyze() {
-    if (!bankCsvText) {
+    if (!bankFiles.length) {
       setError('Please select a bank statement CSV to analyze.');
       return;
     }
@@ -103,15 +101,13 @@ export default function Upload() {
     setError('');
     setLoading(true);
 
-    setTimeout(async () => {
-      try {
-        await analyzeStatement(bankCsvText, usageCsvText);
-      } catch (err) {
-        setError(err.message || 'An error occurred during analysis.');
-      } finally {
-        setLoading(false);
-      }
-    }, 400);
+    try {
+      await analyzeStatement(bankFiles, usageCsvText);
+    } catch (err) {
+      setError(err.message || 'An error occurred during analysis.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -211,7 +207,7 @@ export default function Upload() {
           <div className="mb-4">
             <div className="flex items-center gap-1.5 mb-2">
               <label className="block text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] uppercase tracking-wider">
-                Bank Statement CSV <span className="text-red-500">*</span>
+                Bank Statement CSVs <span className="text-red-500">*</span>
               </label>
               <button
                 type="button"
@@ -246,7 +242,7 @@ export default function Upload() {
               onDrop={(e) => {
                 e.preventDefault();
                 setBankDragOver(false);
-                if (e.dataTransfer.files?.[0]) handleBankFileSelect(e.dataTransfer.files[0]);
+                handleBankFileSelect(e.dataTransfer.files);
               }}
               className={`af-dropzone flex flex-col items-center justify-center gap-2 p-6 transition-colors ${
                 bankDragOver ? 'active' : ''
@@ -255,35 +251,32 @@ export default function Upload() {
               <input
                 ref={bankInputRef}
                 type="file"
+                multiple
                 accept=".csv,text/csv"
-                onChange={(e) => e.target.files?.[0] && handleBankFileSelect(e.target.files[0])}
+                onChange={(e) => { handleBankFileSelect(e.target.files); e.target.value = ''; }}
                 className="hidden"
               />
               <span className="material-symbols-outlined text-4xl text-[#0B5FD8] dark:text-[#4D9AFF]">
                 upload_file
               </span>
 
-              {!bankFile ? (
+              {!bankFiles.length ? (
                 <div className="text-center">
                   <p className="font-medium text-sm text-[#0B1F3A] dark:text-[#E8ECF1]">
-                    <span className="text-[#0B5FD8] dark:text-[#4D9AFF] font-semibold underline">Browse</span> or drag &amp; drop statement CSV
+                    <span className="text-[#0B5FD8] dark:text-[#4D9AFF] font-semibold underline">Browse</span> or drag &amp; drop one or more statement CSVs
                   </p>
                   <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">
                     Supports HDFC, ICICI, SBI, Axis, Kotak, and standard bank CSVs
                   </p>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-xs font-medium">
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
-                  <span className="font-semibold truncate max-w-[220px]">{bankFile.name}</span>
-                  <button
-                    type="button"
-                    onClick={clearBankFile}
-                    className="text-xs underline ml-1 text-gray-500 hover:text-red-600 focus:outline-none"
-                    title="Remove file"
-                  >
-                    Remove
-                  </button>
+                <div className="w-full text-left text-xs" onClick={e => e.stopPropagation()}>
+                  <p className="font-semibold text-emerald-600 mb-2">{bankFiles.length} statement{bankFiles.length === 1 ? '' : 's'} ready · {bankFiles.reduce((sum, file) => sum + file.count, 0)} rows read</p>
+                  {bankFiles.map(file => <div key={`${file.name}:${file.lastModified}`} className="flex justify-between gap-2 py-1">
+                    <span className="truncate">{file.name} · {file.count} rows</span>
+                    <button type="button" onClick={e => clearBankFile(e, file.name)} className="text-red-500 underline">Remove</button>
+                  </div>)}
+                  <p className="text-[#5A6B80] dark:text-[#8899AA] mt-2">Click here to add more statements.</p>
                 </div>
               )}
             </div>
@@ -372,7 +365,7 @@ export default function Upload() {
               <button
                 type="button"
                 onClick={handleAnalyze}
-                disabled={!bankFile}
+                disabled={!bankFiles.length}
                 className="af-btn af-btn-primary w-full py-3.5 text-base shadow-sm"
               >
                 <span className="material-symbols-outlined text-lg">auto_awesome</span>
@@ -412,7 +405,7 @@ export default function Upload() {
 
       {/* Footer */}
       <footer className="w-full text-center py-4 text-xs text-[#5A6B80] dark:text-[#8899AA]">
-        Loss Finder — 100% In-Browser Private Statement Analysis
+        Guest analysis stays in your browser. Signed-in imports save transactions to Neo4j.
       </footer>
     </div>
   );

@@ -44,13 +44,14 @@ const subscriptionController = {
     try {
       const userId = req.user.userId;
       const { subscriptionId } = req.params;
-      const { status, notes } = req.body;
+      const { status, notes, reviewDecision } = req.body;
 
       const updated = await subscriptionRepository.updateSubscriptionStatus(
         userId,
         subscriptionId,
         status,
-        notes
+        notes,
+        reviewDecision
       );
 
       if (!updated) {

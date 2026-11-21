@@ -105,6 +105,7 @@ const subscriptionRepository = {
                 s.statusKind AS statusKind,
                 s.statusLabel AS statusLabel,
                 s.userOverrideStatus AS userOverrideStatus,
+                s.reviewDecision AS reviewDecision,
                 s.confidence AS confidence,
                 s.lastPaymentDate AS lastPaymentDate,
                 s.nextExpectedDate AS nextExpectedDate,
@@ -155,6 +156,7 @@ const subscriptionRepository = {
             label: statusLabel
           },
           userOverrideStatus: rec.get('userOverrideStatus'),
+          reviewDecision: rec.get('reviewDecision'),
           confidence: rec.get('confidence'),
           lastPaymentDate: rec.get('lastPaymentDate'),
           nextExpectedDate: rec.get('nextExpectedDate'),
@@ -190,6 +192,7 @@ const subscriptionRepository = {
                 s.statusKind AS statusKind,
                 s.statusLabel AS statusLabel,
                 s.userOverrideStatus AS userOverrideStatus,
+                s.reviewDecision AS reviewDecision,
                 s.confidence AS confidence,
                 s.lastPaymentDate AS lastPaymentDate,
                 s.nextExpectedDate AS nextExpectedDate,
@@ -231,6 +234,7 @@ const subscriptionRepository = {
           label: rec.get('statusLabel')
         },
         userOverrideStatus: rec.get('userOverrideStatus'),
+        reviewDecision: rec.get('reviewDecision'),
         confidence: rec.get('confidence'),
         lastPaymentDate: rec.get('lastPaymentDate'),
         nextExpectedDate: rec.get('nextExpectedDate'),
@@ -245,7 +249,7 @@ const subscriptionRepository = {
     }
   },
 
-  async updateSubscriptionStatus(userId, idOrKey, newStatus, notes = '') {
+  async updateSubscriptionStatus(userId, idOrKey, newStatus, notes = '', reviewDecision) {
     const session = getSession(neo4j.session.WRITE);
     try {
       const now = new Date().toISOString();
@@ -258,19 +262,21 @@ const subscriptionRepository = {
       const result = await session.run(
         `MATCH (u:User { userId: $userId })-[:TRACKS]->(s:Subscription)
          WHERE s.subscriptionId = $idOrKey OR s.merchantKey = $idOrKey
-         SET s.statusKind = $newStatus,
-             s.statusLabel = $statusLabel,
-             s.userOverrideStatus = $newStatus,
-             s.notes = $notes,
+         SET s.statusKind = CASE WHEN $newStatus IS NULL THEN s.statusKind ELSE $newStatus END,
+             s.statusLabel = CASE WHEN $newStatus IS NULL THEN s.statusLabel ELSE $statusLabel END,
+             s.userOverrideStatus = CASE WHEN $newStatus IS NULL THEN s.userOverrideStatus ELSE $newStatus END,
+             s.reviewDecision = CASE WHEN $reviewDecision IS NULL THEN s.reviewDecision ELSE $reviewDecision END,
+             s.notes = CASE WHEN $newStatus IS NULL THEN s.notes ELSE $notes END,
              s.updatedAt = $now
-         RETURN s.subscriptionId AS subscriptionId, s.statusKind AS statusKind, s.statusLabel AS statusLabel`,
-        { userId, idOrKey, newStatus, statusLabel, notes, now }
+         RETURN s.subscriptionId AS subscriptionId, s.statusKind AS statusKind, s.statusLabel AS statusLabel, s.reviewDecision AS reviewDecision`,
+        { userId, idOrKey, newStatus: newStatus || null, statusLabel: statusLabel || null, notes: notes || '', reviewDecision: reviewDecision || null, now }
       );
 
       if (!result.records.length) return null;
       const rec = result.records[0];
       return {
         subscriptionId: rec.get('subscriptionId'),
+        reviewDecision: rec.get('reviewDecision'),
         status: {
           kind: rec.get('statusKind'),
           label: rec.get('statusLabel')
