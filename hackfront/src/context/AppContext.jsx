@@ -162,7 +162,7 @@ useEffect(() => {
   // Navigate function
   const navigateTo = useCallback((targetView, subId = null) => {
     setView(targetView);
-    if (subId) setSelectedSubId(subId);
+    setSelectedSubId(subId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 

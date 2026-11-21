@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { getCancellationCandidates } from '../engine/cancellationCandidates';
 
 function getMechanismSteps(sub) {
   const mech = (sub.mech || '').toLowerCase();
@@ -58,6 +59,8 @@ Thank you.`;
 export default function CancelGuide() {
   const {
     subscriptions,
+    reviewDecisions,
+    user,
     selectedSubId,
     navigateTo,
     cancelledMap,
@@ -66,11 +69,10 @@ export default function CancelGuide() {
     isDemo
   } = useApp();
 
-  const sub = subscriptions.find(s => s.id === selectedSubId) || subscriptions[0];
+  const sub = selectedSubId ? subscriptions.find(s => s.id === selectedSubId) : null;
   const [copied, setCopied] = useState(false);
 
   if (!sub) {
-    // Guide index view: show all subscriptions
     if (subscriptions.length === 0) {
       return (
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
@@ -94,6 +96,8 @@ export default function CancelGuide() {
         </main>
       );
     }
+
+    const candidates = getCancellationCandidates(subscriptions, reviewDecisions, cancelledMap);
 
     function getStatusClasses(kind) {
       const map = {
@@ -125,7 +129,7 @@ export default function CancelGuide() {
               Cancellation Guides
             </h1>
             <p className="text-xs sm:text-sm text-[#5A6B80] dark:text-[#8899AA] mt-1">
-              Select any recurring payment below for step-by-step instructions to revoke mandates and stop charges.
+              {candidates.length} active subscription{candidates.length === 1 ? '' : 's'} with cancellation steps. Your “Consider cancelling” choices and statement flags appear first.
             </p>
           </div>
           {isDemo && (
@@ -135,29 +139,38 @@ export default function CancelGuide() {
           )}
         </div>
 
-        <div className="space-y-3">
-          {subscriptions.map(s => {
-            const isCancelled = !!cancelledMap[s.id];
+        {candidates.length === 0 ? (
+          <div className="af-card text-center py-12 px-6">
+            <span className="material-symbols-outlined text-4xl text-[#5A6B80] dark:text-[#8899AA]">check_circle</span>
+            <h2 className="mt-3 text-lg font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">No subscriptions to show</h2>
+            <p className="mt-2 text-sm text-[#5A6B80] dark:text-[#8899AA] max-w-lg mx-auto">
+              {user
+                ? 'All detected subscriptions are marked Keep or are no longer active. Change a choice in the Review Centre if you want to see its cancellation guide here.'
+                : 'This statement has no active subscriptions. Upload a newer statement to check again.'}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              {user && <button type="button" onClick={() => navigateTo('review')} className="af-btn af-btn-primary">Review subscriptions</button>}
+              <button type="button" onClick={() => navigateTo('dashboard')} className="af-btn af-btn-secondary">View dashboard</button>
+            </div>
+          </div>
+        ) : <div className="space-y-3">
+          {candidates.map(s => {
             const kind = s.status?.kind || 'active';
+            const chosenByUser = reviewDecisions[s.id] === 'consider_cancelling';
+            const flagged = !reviewDecisions[s.id] && ['hike', 'trial', 'unused'].includes(kind);
+            const label = chosenByUser ? 'Chosen by you' : reviewDecisions[s.id] === 'review' ? 'Review later' : flagged ? s.status?.label : 'Active';
             return (
-              <div
+              <article
                 key={s.id}
-                className="af-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigateTo('guide', s.id)}
+                className="af-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h3 className="text-base font-bold text-[#0B1F3A] dark:text-[#E8ECF1] truncate">{s.name}</h3>
-                    {isCancelled ? (
-                      <span className="af-pill bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 font-semibold">
-                        <span className="material-symbols-outlined text-xs">task_alt</span> Cancelled
-                      </span>
-                    ) : (
-                      <span className={`af-pill ${getStatusClasses(kind)}`}>
-                        <span className="material-symbols-outlined text-xs">{getStatusIcon(kind)}</span>
-                        <span>{s.status?.label || 'Active'}</span>
-                      </span>
-                    )}
+                    <span className={`af-pill ${chosenByUser ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' : flagged ? getStatusClasses(kind) : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}>
+                      <span className="material-symbols-outlined text-xs">{chosenByUser ? 'bookmark' : flagged ? getStatusIcon(kind) : 'info'}</span>
+                      <span>{label}</span>
+                    </span>
                     <span className="px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-800 text-[#5A6B80] dark:text-[#8899AA]">
                       {s.mech || 'Card'}
                     </span>
@@ -166,23 +179,26 @@ export default function CancelGuide() {
                     {s.code || ''}
                   </p>
                   <p className="text-xs text-[#0B1F3A] dark:text-[#E8ECF1] font-semibold">
-                    ₹{s.price.toLocaleString('en-IN')}/{s.per || 'mo'} · {s.category || 'Other'}
+                    ₹{Number(s.price || 0).toLocaleString('en-IN')}/{s.per || 'mo'} · {s.category || 'Other'}
                   </p>
                 </div>
                 <div className="shrink-0">
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); navigateTo('guide', s.id); }}
+                    onClick={() => navigateTo('guide', s.id)}
                     className="af-btn af-btn-primary text-xs"
                   >
                     <span className="material-symbols-outlined text-sm">cancel</span>
-                    <span>Cancel Guide</span>
+                    <span>View cancel guide</span>
                   </button>
                 </div>
-              </div>
+              </article>
             );
           })}
-        </div>
+        </div>}
+        <p className="mt-5 text-xs text-[#5A6B80] dark:text-[#8899AA]">
+          This list does not recommend cancelling every payment. Opening a guide does not cancel a subscription or mandate.
+        </p>
       </main>
     );
   }
@@ -239,11 +255,11 @@ export default function CancelGuide() {
       <div className="mb-6 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => navigateTo('dashboard')}
+          onClick={() => navigateTo('guide')}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-[#5A6B80] hover:text-[#0B1F3A] dark:text-[#8899AA] dark:hover:text-[#E8ECF1] transition-colors focus:outline-none"
         >
           <span className="material-symbols-outlined text-base">arrow_back</span>
-          <span>Back to Dashboard</span>
+          <span>All cancel guides</span>
         </button>
         {isDemo && (
           <span className="af-demo-chip">
