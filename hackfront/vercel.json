@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://lossfinder-final-prototype.onrender.com/api/:path*"
+    }
+  ]
+}
