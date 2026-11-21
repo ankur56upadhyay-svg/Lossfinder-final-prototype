@@ -48,6 +48,7 @@ html:not(.dark) .lf-desktop-nav button:hover { background: rgba(15,23,42,.05) !i
 .lf-desktop-nav button[aria-current='page'], .lf-nav-link[aria-current='page'] { color: var(--af-accent) !important; }
 .lf-desktop-nav button[aria-current='page']::after, .lf-nav-link[aria-current='page']::after { content: ''; position: absolute; bottom: 0; left: 8px; right: 8px; height: 2px; background: var(--af-accent); }
 .lf-app-shell .af-card { background: var(--af-card); border: 1px solid var(--af-card-border); border-radius: 16px; padding: 24px; box-shadow: var(--lf-shadow) !important; transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out, opacity 150ms ease-out; }
+.dark .lf-coach { box-shadow: none; }
 .lf-app-shell .lf-results { padding: 0; }
 .lf-app-shell .af-card-hover:hover { border-color: var(--af-accent); transform: none; }
 .lf-app-shell .af-stat-blue, .lf-app-shell .af-stat-orange, .lf-app-shell .af-stat-purple { border-top: 1px solid var(--af-card-border); }

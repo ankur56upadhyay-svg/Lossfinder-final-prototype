@@ -164,15 +164,15 @@ export default function Dashboard() {
               <td data-label="Service"><span className="lf-service-name" title={sub.name}>{sub.name}</span>{reason && <span className="lf-service-reason">{reason}</span>}<span className="af-code lf-narration" title={sub.code || ''}>{sub.code || ''}</span></td>
               <td data-label="Amount" className="lf-money-cell">{Number.isFinite(sub.was) && sub.was < sub.price && <del>{money(sub.was)}</del>}<strong>{money(sub.price)}</strong></td>
               <td data-label="Frequency">{sub.per === 'yr' ? 'Yearly' : 'Monthly'}</td>
-              <td data-label="Status"><span className={`af-pill lf-status lf-status-${cancelled ? 'cancelled' : kind}`}>{cancelled ? 'Marked cancelled' : sub.status?.label || 'Active'}</span></td>
-              <td data-label="Decision"><div className="lf-choice-group" aria-label={`Decision for ${sub.name}`}>{[['keep','Keep'],['consider_cancelling','Cancel'],['review','Remind me']].map(([value,label]) => <button key={value} type="button" className={choice === value ? 'is-selected' : ''} aria-pressed={choice === value} onClick={() => choose(sub, value)}>{label}</button>)}</div></td>
+              <td data-label="Status"><span className={`af-pill lf-status lf-status-${cancelled ? 'cancelled' : kind}`}>{cancelled ? 'Marked cancelled' : sub.status?.label || 'Active'}</span>{choice && <span className="af-pill lf-status-decision">{decisionLabels[choice]}</span>}</td>
+              <td data-label="Decision"><div className="lf-choice-group" aria-label={`Decision for ${sub.name}`}>{[['keep','Keep'],['consider_cancelling','Cancel'],['review','Remind me']].map(([value,label]) => <button key={value} type="button" title={value === 'review' ? 'Adds this payment to your review list. No email or push notification is sent.' : undefined} className={choice === value ? 'is-selected' : ''} aria-pressed={choice === value} onClick={() => choose(sub, value)}>{label}</button>)}</div></td>
               <td data-label="Actions"><div className="lf-row-links"><button type="button" onClick={() => navigateTo('guide', sub.id)} className={tourStep === 2 && index === 0 ? 'lf-coach-target' : ''}>See cancel steps</button><button type="button" onClick={() => navigateTo('detail', sub.id)}>Details</button></div></td>
             </tr>;
           })}</tbody>
         </table>
       </div>}
       {filtered.length > shown && <button type="button" className="af-btn af-btn-secondary lf-show-more" onClick={() => setShown(value => value + PAGE_SIZE)}>Show more ({filtered.length - shown} left)</button>}
-      <p className="lf-results-foot">“Cancel” saves your plan. Open the guide and complete cancellation with the provider; we cannot stop payments for you.</p>
+      <p className="lf-results-foot">“Cancel” saves your plan. “Remind me” adds a review choice, without sending a notification. Open the guide and complete cancellation with the provider; we cannot stop payments for you.</p>
     </section>
     {tourStep !== null && <CoachTour step={tourStep} setStep={setTourStep} onClose={finishTour} />}
   </main>;
