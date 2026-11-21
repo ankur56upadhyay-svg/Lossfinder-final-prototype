@@ -5,10 +5,40 @@ const subscriptionDetectionService = require('./subscriptionDetectionService');
 const { computeRowHash } = require('../utils/fingerprint');
 const { findMerchant, determineMechanism } = require('../utils/merchants');
 const logger = require('../utils/logger');
+const { MAX_FILES_IN_WINDOW, WINDOW_DAYS, MAX_STATEMENT_DAYS } = require('../config/uploadLimits');
+
+function checkStatementDates(transactions) {
+  const byFile = new Map();
+  for (const row of transactions) {
+    const index = row.sourceFileIndex ?? 0;
+    const date = row.transactionDate || row.date;
+    if (!date) continue;
+    const bounds = byFile.get(index) || { first: date, last: date };
+    if (date < bounds.first) bounds.first = date;
+    if (date > bounds.last) bounds.last = date;
+    byFile.set(index, bounds);
+  }
+  for (const [index, { first, last }] of byFile) {
+    if ((Date.parse(last) - Date.parse(first)) / 86400000 > MAX_STATEMENT_DAYS) {
+      const error = new Error(`Statement ${index + 1} spans more than two years. Export a shorter date range.`);
+      error.status = 400;
+      error.code = 'STATEMENT_DATE_RANGE_EXCEEDED';
+      throw error;
+    }
+  }
+}
 
 const importService = {
   async processImport(userId, inputData) {
     const { transactions = [], bankName = 'Your bank', fileNames = [] } = inputData;
+    const fileCount = fileNames.length || 1;
+    if (fileCount > MAX_FILES_IN_WINDOW) {
+      const error = new Error('You can upload at most 10 statement files in 14 days.');
+      error.status = 400;
+      error.code = 'TOO_MANY_FILES';
+      throw error;
+    }
+    checkStatementDates(transactions);
     const importId = 'imp_' + crypto.randomBytes(8).toString('hex');
     const now = new Date().toISOString();
 
@@ -85,7 +115,7 @@ const importService = {
     const dateRangeEnd = dates[dates.length - 1];
 
     // 3. Create import batch record
-    await importRepository.createImportBatch(userId, {
+    const created = await importRepository.createImportBatch(userId, {
       importId,
       importedAt: now,
       transactionCount: toInsert.length,
@@ -93,8 +123,15 @@ const importService = {
       dateRangeEnd,
       status: 'completed',
       bankName,
-      fileNames
+      fileNames,
+      fileCount
     });
+    if (!created) {
+      const error = new Error(`You have reached the limit of ${MAX_FILES_IN_WINDOW} statement files in a rolling ${WINDOW_DAYS}-day period. Please try again when an earlier upload expires.`);
+      error.status = 429;
+      error.code = 'FILE_QUOTA_EXCEEDED';
+      throw error;
+    }
 
     // 4. Save transactions in batches of 500
     const BATCH_SIZE = 500;

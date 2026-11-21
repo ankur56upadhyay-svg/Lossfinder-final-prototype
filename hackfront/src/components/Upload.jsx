@@ -6,6 +6,22 @@ import CursorGlow from './landing-effects/CursorGlow';
 import './LandingPage.css';
 import './UploadPage.css';
 
+const MAX_FILES_PER_TWO_WEEKS = 10;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_TOTAL_ROWS = 20000;
+const MAX_STATEMENT_DAYS = 731;
+const GUEST_QUOTA_KEY = 'lossfinder_guest_upload_times';
+
+function guestUploadTimes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GUEST_QUOTA_KEY) || '[]');
+    const cutoff = Date.now() - 14 * 86400000;
+    return Array.isArray(saved) ? saved.filter(time => Number.isFinite(time) && time >= cutoff) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function Upload() {
   const {
     user,
@@ -48,18 +64,29 @@ export default function Upload() {
     try {
       const known = new Set(bankFiles.map(item => `${item.name}:${item.size}:${item.lastModified}`));
       const added = [];
-      if (bankFiles.length + picked.length > 20) throw new Error('You can analyze up to 20 statements together.');
+      if (bankFiles.length + picked.length > MAX_FILES_PER_TWO_WEEKS) throw new Error('You can select at most 10 statements in one analysis. Signed-in accounts can upload 10 files every 14 days.');
+      if (!user && guestUploadTimes().length + bankFiles.length + picked.length > MAX_FILES_PER_TWO_WEEKS) {
+        throw new Error('This browser has reached the 10 statement files per 14 days limit. Please try again when an earlier upload expires.');
+      }
       for (const file of picked) {
         if (!file.name.toLowerCase().endsWith('.csv')) throw new Error(`${file.name}: please select a CSV file.`);
-        if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name}: the 5 MB file limit was exceeded.`);
+        if (file.size > MAX_FILE_BYTES) throw new Error(`${file.name}: the 5 MB file limit was exceeded. Export a shorter date range.`);
         const key = `${file.name}:${file.size}:${file.lastModified}`;
         if (known.has(key)) continue;
         const text = await file.text();
         if (!validateBankCsvHeaders(text)) throw new Error(`${file.name}: Date, Narration and Debit/Amount columns are required.`);
         const rows = parseCSV(text);
         if (!rows.length) throw new Error(`${file.name}: no readable transactions were found.`);
+        const first = rows[0].transactionDate;
+        const last = rows[rows.length - 1].transactionDate;
+        if ((Date.parse(last) - Date.parse(first)) / 86400000 > MAX_STATEMENT_DAYS) {
+          throw new Error(`${file.name}: this statement spans more than two years. Export a shorter date range.`);
+        }
         added.push({ name: file.name, size: file.size, lastModified: file.lastModified, text, count: rows.length });
         known.add(key);
+      }
+      if (bankFiles.reduce((total, file) => total + file.count, 0) + added.reduce((total, file) => total + file.count, 0) > MAX_TOTAL_ROWS) {
+        throw new Error('An analysis can contain at most 20,000 transaction rows. Upload fewer statements together.');
       }
       setBankFiles(previous => [...previous, ...added]);
       setError('');
@@ -70,6 +97,10 @@ export default function Upload() {
 
   function handleUsageFileSelect(file) {
     if (!file) return;
+    if (file.size > MAX_FILE_BYTES) {
+      setError('Usage log exceeds the 5 MB file limit.');
+      return;
+    }
     if (!file.name.toLowerCase().endsWith('.csv')) {
       setError('Usage log must be a .csv file.');
       return;
@@ -102,12 +133,23 @@ export default function Upload() {
       setError('Please select a bank statement CSV to analyze.');
       return;
     }
+    if (!user && guestUploadTimes().length + bankFiles.length > MAX_FILES_PER_TWO_WEEKS) {
+      setError('This browser has reached the 10 statement files per 14 days limit.');
+      return;
+    }
 
     setError('');
     setLoading(true);
 
     try {
       await analyzeStatement(bankFiles, usageCsvText);
+      if (!user) {
+        try {
+          localStorage.setItem(GUEST_QUOTA_KEY, JSON.stringify([...guestUploadTimes(), ...bankFiles.map(() => Date.now())]));
+        } catch {
+          // Guest analyses still work when browser storage is disabled.
+        }
+      }
     } catch (err) {
       setError(err.message || 'An error occurred during analysis.');
     } finally {
@@ -300,6 +342,7 @@ export default function Upload() {
                   <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">
                     Supports HDFC, ICICI, SBI, Axis, Kotak, and standard bank CSVs
                   </p>
+                  <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Up to 5 MB and two years per CSV · 10 files every 14 days</p>
                 </div>
               ) : (
                 <div className="w-full text-left text-xs" onClick={e => e.stopPropagation()}>

@@ -97,7 +97,8 @@ export function useLossFinderApi() {
         currency: 'INR',
         ref: t.ref || '',
         method: t.mech || '',
-        status: t.direction === 'credit' ? 'CREDIT' : 'DEBIT'
+        status: t.direction === 'credit' ? 'CREDIT' : 'DEBIT',
+        sourceFileIndex: t.sourceFileIndex
       }));
 
       const res = await api.imports.create({

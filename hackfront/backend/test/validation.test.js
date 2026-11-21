@@ -3,15 +3,20 @@ const assert = require('node:assert/strict');
 const { importBatchSchema } = require('../validators/importValidators');
 const { registerSchema } = require('../validators/authValidators');
 
-test('patched validator rejects oversized imports and invalid transaction values', () => {
+test('import validator enforces file count, row count, and source file mapping', () => {
   const validRow = {
     transactionDate: '2026-11-21',
     description: 'Subscription',
-    amount: 100
+    amount: 100,
+    sourceFileIndex: 0
   };
-  assert.equal(importBatchSchema.safeParse({ transactions: Array(5001).fill(validRow) }).success, false);
-  assert.equal(importBatchSchema.safeParse({ transactions: [{ ...validRow, amount: -1 }] }).success, false);
-  assert.equal(importBatchSchema.safeParse({ transactions: [validRow] }).success, true);
+  const input = { fileNames: ['bank.csv'], transactions: [validRow] };
+  assert.equal(importBatchSchema.safeParse(input).success, true);
+  assert.equal(importBatchSchema.safeParse({ ...input, transactions: Array(5001).fill(validRow) }).success, true);
+  assert.equal(importBatchSchema.safeParse({ ...input, transactions: Array(20001).fill(validRow) }).success, false);
+  assert.equal(importBatchSchema.safeParse({ ...input, fileNames: Array(11).fill('bank.csv') }).success, false);
+  assert.equal(importBatchSchema.safeParse({ ...input, transactions: [{ ...validRow, sourceFileIndex: 1 }] }).success, false);
+  assert.equal(importBatchSchema.safeParse({ ...input, transactions: [{ ...validRow, amount: -1 }] }).success, false);
 });
 
 test('registration schema normalizes valid email and rejects invalid email', () => {

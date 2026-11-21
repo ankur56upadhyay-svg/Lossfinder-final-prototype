@@ -263,7 +263,7 @@ export function AppProvider({ children }) {
     const files = Array.isArray(bankFiles) ? bankFiles : [{ name: 'Statement', text: bankFiles }];
     const parsed = files.map(file => ({ name: file.name, transactions: parseCSV(file.text) }));
     const seen = new Set();
-    const rawTxns = parsed.flatMap(file => file.transactions).filter(tx => {
+    const rawTxns = parsed.flatMap((file, sourceFileIndex) => file.transactions.map(tx => ({ ...tx, sourceFileIndex }))).filter(tx => {
       const ref = tx.ref?.trim();
       if (!ref) return true;
       const key = [tx.transactionDate, tx.direction, tx.amount, tx.deposit, tx.narration?.trim().toLowerCase(), ref].join('|');

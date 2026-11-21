@@ -63,3 +63,39 @@ test('reuploading a statement creates a separate import and analysis', async () 
     subscriptionDetectionService.analyzeForUser = originals.detect;
   }
 });
+
+test('an import over the account quota is rejected before saving transactions', async () => {
+  const originalCreate = importRepository.createImportBatch;
+  const originalSave = transactionRepository.saveTransactionsBatch;
+  let saved = false;
+  importRepository.createImportBatch = async () => null;
+  transactionRepository.saveTransactionsBatch = async () => { saved = true; return 1; };
+  try {
+    await assert.rejects(importService.processImport('usr_one', {
+      fileNames: ['statement.csv'],
+      transactions: [{ transactionDate: '2026-10-15', description: 'NETFLIX AUTOPAY', amount: 649 }]
+    }), error => error.status === 429 && error.code === 'FILE_QUOTA_EXCEEDED');
+    assert.equal(saved, false);
+  } finally {
+    importRepository.createImportBatch = originalCreate;
+    transactionRepository.saveTransactionsBatch = originalSave;
+  }
+});
+
+test('a statement spanning more than two years is rejected before quota reservation', async () => {
+  const originalCreate = importRepository.createImportBatch;
+  let reserved = false;
+  importRepository.createImportBatch = async () => { reserved = true; return {}; };
+  try {
+    await assert.rejects(importService.processImport('usr_one', {
+      fileNames: ['statement.csv'],
+      transactions: [
+        { sourceFileIndex: 0, transactionDate: '2023-01-01', description: 'PAYMENT', amount: 100 },
+        { sourceFileIndex: 0, transactionDate: '2026-01-02', description: 'PAYMENT', amount: 100 }
+      ]
+    }), error => error.status === 400 && error.code === 'STATEMENT_DATE_RANGE_EXCEEDED');
+    assert.equal(reserved, false);
+  } finally {
+    importRepository.createImportBatch = originalCreate;
+  }
+});
