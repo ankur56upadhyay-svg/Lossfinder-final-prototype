@@ -11,6 +11,7 @@ import AuthModal from './components/AuthModal'
 import ReviewCentre from './components/ReviewCentre'
 import SavedDecisions from './components/SavedDecisions'
 import DeleteAccountModal from './components/DeleteAccountModal'
+import AnalysisHistory from './components/AnalysisHistory'
 
 export default function App() {
   const { view, loadingUser, user, openAuthModal, navigateTo } = useApp()
@@ -43,6 +44,7 @@ export default function App() {
     >
       <Navbar />
       <div style={{ flex: 1 }}>
+        {view === 'history' && user && <AnalysisHistory />}
         {view === 'upload'    && <Upload />}
         {view === 'dashboard' && <Dashboard />}
         {view === 'detail'    && <DetailView />}

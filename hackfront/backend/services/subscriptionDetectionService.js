@@ -149,16 +149,17 @@ function buildHistory(kept, per) {
 }
 
 const subscriptionDetectionService = {
-  async analyzeForUser(userId) {
+  async analyzeForUser(userId, { importId = null, persist = true } = {}) {
     logger.info('Starting subscription detection for user', { userId });
 
-    const rawRows = await transactionRepository.getAllDebitTransactionsByUser(userId);
+    const rawRows = await transactionRepository.getAllDebitTransactionsByUser(userId, importId);
     if (!rawRows || !rawRows.length) {
       logger.info('No transactions found for user', { userId });
       return [];
     }
 
-    const usageEvents = await usageRepository.getUsageEventsByUser(userId);
+    // Usage events have no import link, so they cannot be attributed to an older analysis.
+    const usageEvents = importId ? [] : await usageRepository.getUsageEventsByUser(userId);
     const usageByMerchant = {};
     for (const ue of usageEvents) {
       if (!usageByMerchant[ue.merchantKey]) {
@@ -352,8 +353,10 @@ const subscriptionDetectionService = {
     }
 
     // Persist results to Neo4j
-    await subscriptionRepository.saveSubscriptions(userId, detectedSubs);
-    logger.info(`Detected and persisted ${detectedSubs.length} subscriptions for user`, { userId });
+    if (persist) {
+      await subscriptionRepository.saveSubscriptions(userId, detectedSubs);
+      logger.info(`Detected and persisted ${detectedSubs.length} subscriptions for user`, { userId });
+    }
 
     return detectedSubs;
   }

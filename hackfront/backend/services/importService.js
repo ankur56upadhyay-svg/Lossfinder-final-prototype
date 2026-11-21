@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 
 const importService = {
   async processImport(userId, inputData) {
-    const { transactions = [], bankName = 'Your bank' } = inputData;
+    const { transactions = [], bankName = 'Your bank', fileNames = [] } = inputData;
     const importId = 'imp_' + crypto.randomBytes(8).toString('hex');
     const now = new Date().toISOString();
 
@@ -64,18 +64,14 @@ const importService = {
       throw new Error('No valid transactions could be processed from this file.');
     }
 
-    // 2. Deduplication check against persisted transactions
-    const allHashes = validRows.map(r => r.sourceRowHash);
-    const existingHashes = await transactionRepository.findExistingHashes(userId, allHashes);
-
     const toInsert = [];
     let duplicateCount = 0;
 
-    // Also deduplicate within the current import batch
+    // Deduplicate within this analysis, while keeping separate analyses independent.
     const seenInBatch = new Set();
 
     for (const row of validRows) {
-      if (existingHashes.has(row.sourceRowHash) || seenInBatch.has(row.sourceRowHash)) {
+      if (seenInBatch.has(row.sourceRowHash)) {
         duplicateCount++;
       } else {
         seenInBatch.add(row.sourceRowHash);
@@ -96,7 +92,8 @@ const importService = {
       dateRangeStart,
       dateRangeEnd,
       status: 'completed',
-      bankName
+      bankName,
+      fileNames
     });
 
     // 4. Save transactions in batches of 500
@@ -117,12 +114,18 @@ const importService = {
       rejectedCount
     });
 
-    // 5. Trigger graph subscription detection pipeline
+    // 5. Save results scoped to this import so later uploads cannot change this analysis.
     try {
-      await subscriptionDetectionService.analyzeForUser(userId);
+      const detected = await subscriptionDetectionService.analyzeForUser(userId, { importId, persist: false });
+      await importRepository.saveAnalysisSnapshot(userId, importId, detected.map(sub => ({
+        ...sub,
+        id: sub.merchantKey,
+        reviewDecision: null,
+        cancelled: false
+      })));
     } catch (analysisErr) {
       logger.error('Subscription analysis error after import', { error: analysisErr.message });
-      // Don't fail the whole import if re-analysis encounters an issue; transactions are safe
+      // The import remains available; its snapshot can be generated when opened.
     }
 
     return {
@@ -133,7 +136,8 @@ const importService = {
       totalRows: transactions.length,
       dateRangeStart,
       dateRangeEnd,
-      bankName
+      bankName,
+      fileNames
     };
   }
 };

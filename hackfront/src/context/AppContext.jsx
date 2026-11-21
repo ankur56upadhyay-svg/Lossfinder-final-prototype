@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { useLossFinderApi } from '../hooks/useLossFinderApi';
+import { api } from '../services/api';
 import { parseCSV, parseUsageCSV } from '../engine/parse';
 import { enrichTransactions } from '../engine/merchants';
 import { findRecurring } from '../engine/recurring';
@@ -46,14 +47,17 @@ export function AppProvider({ children }) {
     register,
     logout:apiLogout,
     deleteAccount:apiDeleteAccount,
-    importToNeo4j,
-    fetchSubscriptions,
-    updateSubscriptionStatus
+    importToNeo4j
   } = useLossFinderApi();
 
-  // Navigation state: 'upload' | 'dashboard' | 'detail' | 'guide'
+  // Navigation state: 'history' | 'upload' | 'dashboard' | 'detail' | 'guide'
   const [view, setView] = useState('upload');
   const [selectedSubId, setSelectedSubId] = useState(null);
+  const [analysisHistory, setAnalysisHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [openingImportId, setOpeningImportId] = useState(null);
+  const [activeImportId, setActiveImportId] = useState(null);
 
   // Guest mode toggle (ephemeral in-memory state: wiped on refresh or tab close!)
   const [isGuest, setIsGuest] = useState(false);
@@ -83,6 +87,11 @@ export function AppProvider({ children }) {
     setIsGuest(false);
     setCancelledMap({});
     setReviewDecisions({});
+    setAnalysisHistory([]);
+    setHistoryLoading(false);
+    setHistoryError('');
+    setOpeningImportId(null);
+    setActiveImportId(null);
     setAuthModalOpen(false);
     setDeleteAccountModalOpen(false);
   }, []);
@@ -111,53 +120,61 @@ export function AppProvider({ children }) {
     showToast('Your account and saved data were deleted.');
   }, [apiDeleteAccount, clearAccountView, showToast]);
 
-  // When user logs in, if they already have saved data in Neo4j, fetch it
-  // useEffect(() => {
-  //   if (user) {
-  //     setIsGuest(false);
-  //     fetchSubscriptions()
-  //       .then(subs => {
-  //         if (subs && subs.length > 0) {
-  //           setSubscriptions(subs);
-  //           setBankName('Neo4j Graph Database');
-  //           setIsDemo(false);
-  //         }
-  //       })
-  //       .catch(err => {
-  //         console.warn('Could not load user subscriptions:', err);
-  //       });
-  //   }
-  // }, [user, fetchSubscriptions]);
-  // Restore user's saved data after login or page reload
-useEffect(() => {
-  if (user) {
+  const refreshAnalysisHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError('');
+    try {
+      const result = await api.imports.list();
+      setAnalysisHistory(result.imports || []);
+      return result.imports || [];
+    } catch (error) {
+      setHistoryError(error.message || 'Could not load your analyses.');
+      throw error;
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  // Sign-in always lands on the user's analysis list, including for a new account.
+  useLayoutEffect(() => {
+    if (!user) return;
     let active = true;
     setIsGuest(false);
-
-    fetchSubscriptions()
-      .then(subs => {
-        if (!active) return;
-        if (subs && subs.length > 0) {
-        setSubscriptions(subs);
-        setReviewDecisions(Object.fromEntries(subs.filter(s => s.reviewDecision).map(s => [s.id, s.reviewDecision])));
-          setBankName('Neo4j Graph Database');
-          setIsDemo(false);
-
-          // Automatically open dashboard if saved data exists
-          setView('dashboard');
-        } else {
-          // New user without saved data
-          setSubscriptions([]);
-          setReviewDecisions({});
-          setView('upload');
-        }
-      })
-      .catch(err => {
-        if (active) console.warn('Could not load user subscriptions:', err);
-      });
+    setIsDemo(false);
+    setSubscriptions([]);
+    setReviewDecisions({});
+    setCancelledMap({});
+    setActiveImportId(null);
+    setSelectedSubId(null);
+    setView('history');
+    setHistoryLoading(true);
+    setHistoryError('');
+    api.imports.list()
+      .then(result => { if (active) setAnalysisHistory(result.imports || []); })
+      .catch(error => { if (active) setHistoryError(error.message || 'Could not load your analyses.'); })
+      .finally(() => { if (active) setHistoryLoading(false); });
     return () => { active = false; };
-  }
-}, [user, fetchSubscriptions]);
+  }, [user]);
+
+  const openAnalysis = useCallback(async (importId) => {
+    setOpeningImportId(importId);
+    try {
+      const result = await api.imports.analysis(importId);
+      const subs = result.subs || [];
+      setSubscriptions(subs);
+      setReviewDecisions(Object.fromEntries(subs.filter(sub => sub.reviewDecision).map(sub => [sub.id, sub.reviewDecision])));
+      setCancelledMap(Object.fromEntries(subs.filter(sub => sub.cancelled).map(sub => [sub.id, true])));
+      setActiveImportId(importId);
+      setBankName(result.import?.bankName || 'Uploaded Bank Statement');
+      setIsDemo(false);
+      setSelectedSubId(null);
+      setView('dashboard');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return result;
+    } finally {
+      setOpeningImportId(null);
+    }
+  }, []);
 
   // Navigate function
   const navigateTo = useCallback((targetView, subId = null) => {
@@ -178,15 +195,20 @@ useEffect(() => {
       return next;
     });
 
-    // If logged in, also persist cancellation override to Neo4j
-    if (user) {
+    if (user && activeImportId) {
       try {
-        await updateSubscriptionStatus(subId, cancelled ? 'ended' : 'active', cancelled ? 'Cancelled by user' : 'Reactivated');
-      } catch (e) {
-        console.warn('Backend update failed:', e);
+        await api.imports.updateAnalysis(activeImportId, subId, { cancelled });
+      } catch (error) {
+        setCancelledMap(previous => {
+          const restored = { ...previous };
+          if (cancelled) delete restored[subId];
+          else restored[subId] = true;
+          return restored;
+        });
+        showToast('Could not save the cancellation choice. Please retry.');
       }
     }
-  }, [user, updateSubscriptionStatus]);
+  }, [user, activeImportId, showToast]);
 
   const saveReviewDecisions = useCallback(async (draft) => {
     const changes = Object.entries(draft).filter(([id, choice]) =>
@@ -199,7 +221,8 @@ useEffect(() => {
     for (const [id, choice] of changes) {
       if (user) {
         try {
-          await updateSubscriptionStatus(id, undefined, undefined, choice);
+          if (!activeImportId) throw new Error('Open an analysis before saving choices.');
+          await api.imports.updateAnalysis(activeImportId, id, { reviewDecision: choice });
         } catch (error) {
           failed++;
           continue;
@@ -209,7 +232,7 @@ useEffect(() => {
     }
     setReviewDecisions(current => ({ ...current, ...saved }));
     return { saved: Object.keys(saved).length, failed };
-  }, [subscriptions, reviewDecisions, user, updateSubscriptionStatus]);
+  }, [subscriptions, reviewDecisions, user, activeImportId]);
 
   // Start guest mode
   const startGuestMode = useCallback(() => {
@@ -220,6 +243,7 @@ useEffect(() => {
     setIsDemo(false);
     setCancelledMap({});
     setReviewDecisions({});
+    setActiveImportId(null);
   }, []);
 
   // Load sample data
@@ -229,6 +253,7 @@ useEffect(() => {
     setBankName('Demo Bank (Sample Statement)');
     setSubscriptions(DEMO_SUBSCRIPTIONS);
     setReviewDecisions({});
+    setActiveImportId(null);
     setView('dashboard');
     showToast('Loaded sample subscription profile');
   }, [showToast]);
@@ -265,16 +290,19 @@ useEffect(() => {
 
     if (user) {
       // Authenticated Mode: Send normalized transactions to Neo4j
+      let imported;
       try {
-        const importRes = await importToNeo4j(detectedBank, enriched);
-        setSubscriptions(importRes.subscriptions || []);
-        setReviewDecisions(Object.fromEntries((importRes.subscriptions || []).filter(s => s.reviewDecision).map(s => [s.id, s.reviewDecision])));
-        setBankName(detectedBank);
-        setIsDemo(false);
-        setView('dashboard');
-        showToast(`Saved to Neo4j: ${importRes.import?.acceptedCount ?? enriched.length} new transactions stored.`);
+        imported = await importToNeo4j(detectedBank, enriched, files.map(file => file.name));
       } catch (err) {
-        throw new Error(`Could not complete the saved import: ${err.message}. Please check your account before retrying.`);
+        throw new Error(`Could not save the new analysis: ${err.message}`);
+      }
+      refreshAnalysisHistory().catch(() => {});
+      try {
+        await openAnalysis(imported.importId);
+        showToast(`New analysis saved with ${imported.acceptedCount ?? enriched.length} transactions.`);
+      } catch (err) {
+        setView('history');
+        setHistoryError('Your statement was saved, but its results could not be opened. Retry from My analyses.');
       }
     } else {
       // Guest Mode: Store strictly in memory, zero network/db writes
@@ -285,7 +313,7 @@ useEffect(() => {
       setView('dashboard');
       showToast('Analysis complete! All data stored ephemerally.');
     }
-  }, [user, importToNeo4j, showToast]);
+  }, [user, importToNeo4j, openAnalysis, refreshAnalysisHistory, showToast]);
 
   // Open Auth modal
   const openAuthModal = useCallback((mode = 'login') => {
@@ -319,6 +347,13 @@ useEffect(() => {
         setView,
         selectedSubId,
         setSelectedSubId,
+        analysisHistory,
+        historyLoading,
+        historyError,
+        openingImportId,
+        activeImportId,
+        refreshAnalysisHistory,
+        openAnalysis,
         navigateTo,
         isGuest,
         startGuestMode,

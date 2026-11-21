@@ -85,7 +85,7 @@ export function useLossFinderApi() {
     }
   }, []);
 
-  const importToNeo4j = useCallback(async (bankName, transactions) => {
+  const importToNeo4j = useCallback(async (bankName, transactions, fileNames = []) => {
     setApiLoading(true);
     setApiError(null);
     try {
@@ -102,15 +102,10 @@ export function useLossFinderApi() {
 
       const res = await api.imports.create({
         bankName: bankName || 'Your Bank',
+        fileNames,
         transactions: formatted
       });
-
-      // Also fetch subscriptions right after import
-      const subsRes = await api.subscriptions.list();
-      return {
-        import: res.import,
-        subscriptions: subsRes.subs || []
-      };
+      return res.import;
     } catch (err) {
       setApiError(err.message || 'Failed to import into Neo4j');
       throw err;

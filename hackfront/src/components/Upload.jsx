@@ -44,6 +44,7 @@ export default function Upload() {
     try {
       const known = new Set(bankFiles.map(item => `${item.name}:${item.size}:${item.lastModified}`));
       const added = [];
+      if (bankFiles.length + picked.length > 20) throw new Error('You can analyze up to 20 statements together.');
       for (const file of picked) {
         if (!file.name.toLowerCase().endsWith('.csv')) throw new Error(`${file.name}: please select a CSV file.`);
         if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name}: the 5 MB file limit was exceeded.`);
@@ -381,14 +382,14 @@ export default function Upload() {
               </div>
 
               {/* Load Sample Button */}
-              <button
+              {!user && <button
                 type="button"
                 onClick={loadSampleData}
                 className="af-btn af-btn-secondary w-full py-2.5 text-sm"
               >
                 <span className="material-symbols-outlined text-base">visibility</span>
                 <span>Load sample data</span>
-              </button>
+              </button>}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 gap-3">

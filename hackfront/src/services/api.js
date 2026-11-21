@@ -72,6 +72,11 @@ export const api = {
     }),
     list: () => request('/api/imports'),
     get: (id) => request(`/api/imports/${id}`),
+    analysis: (id) => request(`/api/imports/${encodeURIComponent(id)}/analysis`),
+    updateAnalysis: (id, merchantKey, changes) => request(`/api/imports/${encodeURIComponent(id)}/analysis/${encodeURIComponent(merchantKey)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(changes)
+    }),
     delete: (id) => request(`/api/imports/${id}`, {
       method: 'DELETE'
     })

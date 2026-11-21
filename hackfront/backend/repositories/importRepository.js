@@ -15,12 +15,13 @@ const importRepository = {
            dateRangeStart: $dateRangeStart,
            dateRangeEnd: $dateRangeEnd,
            status: $status,
-           bankName: $bankName
+           bankName: $bankName,
+           fileNames: $fileNames
          })
          CREATE (u)-[:CREATED_IMPORT]->(i)
          RETURN i.importId AS importId, i.importedAt AS importedAt, i.transactionCount AS transactionCount,
                 i.dateRangeStart AS dateRangeStart, i.dateRangeEnd AS dateRangeEnd, i.status AS status,
-                i.bankName AS bankName`,
+                i.bankName AS bankName, i.fileNames AS fileNames`,
         {
           userId,
           importId: batchData.importId,
@@ -29,7 +30,8 @@ const importRepository = {
           dateRangeStart: batchData.dateRangeStart || null,
           dateRangeEnd: batchData.dateRangeEnd || null,
           status: batchData.status || 'completed',
-          bankName: batchData.bankName || 'Your bank'
+          bankName: batchData.bankName || 'Your bank',
+          fileNames: batchData.fileNames || []
         }
       );
       const rec = result.records[0];
@@ -40,7 +42,8 @@ const importRepository = {
         dateRangeStart: rec.get('dateRangeStart'),
         dateRangeEnd: rec.get('dateRangeEnd'),
         status: rec.get('status'),
-        bankName: rec.get('bankName')
+        bankName: rec.get('bankName'),
+        fileNames: rec.get('fileNames') || []
       };
     } finally {
       await session.close();
@@ -54,7 +57,7 @@ const importRepository = {
         `MATCH (u:User { userId: $userId })-[:CREATED_IMPORT]->(i:ImportBatch)
          RETURN i.importId AS importId, i.importedAt AS importedAt, i.transactionCount AS transactionCount,
                 i.dateRangeStart AS dateRangeStart, i.dateRangeEnd AS dateRangeEnd, i.status AS status,
-                i.bankName AS bankName
+                i.bankName AS bankName, i.fileNames AS fileNames
          ORDER BY i.importedAt DESC`,
         { userId }
       );
@@ -65,7 +68,8 @@ const importRepository = {
         dateRangeStart: rec.get('dateRangeStart'),
         dateRangeEnd: rec.get('dateRangeEnd'),
         status: rec.get('status'),
-        bankName: rec.get('bankName')
+        bankName: rec.get('bankName'),
+        fileNames: rec.get('fileNames') || []
       }));
     } finally {
       await session.close();
@@ -79,7 +83,8 @@ const importRepository = {
         `MATCH (u:User { userId: $userId })-[:CREATED_IMPORT]->(i:ImportBatch { importId: $importId })
          RETURN i.importId AS importId, i.importedAt AS importedAt, i.transactionCount AS transactionCount,
                 i.dateRangeStart AS dateRangeStart, i.dateRangeEnd AS dateRangeEnd, i.status AS status,
-                i.bankName AS bankName
+                i.bankName AS bankName, i.fileNames AS fileNames,
+                i.analysisJson AS analysisJson
          LIMIT 1`,
         { userId, importId }
       );
@@ -92,8 +97,25 @@ const importRepository = {
         dateRangeStart: rec.get('dateRangeStart'),
         dateRangeEnd: rec.get('dateRangeEnd'),
         status: rec.get('status'),
-        bankName: rec.get('bankName')
+        bankName: rec.get('bankName'),
+        fileNames: rec.get('fileNames') || [],
+        analysisJson: rec.get('analysisJson')
       };
+    } finally {
+      await session.close();
+    }
+  },
+
+  async saveAnalysisSnapshot(userId, importId, subscriptions) {
+    const session = getSession(neo4j.session.WRITE);
+    try {
+      const result = await session.run(
+        `MATCH (u:User { userId: $userId })-[:CREATED_IMPORT]->(i:ImportBatch { importId: $importId })
+         SET i.analysisJson = $analysisJson
+         RETURN i.importId AS importId`,
+        { userId, importId, analysisJson: JSON.stringify(subscriptions) }
+      );
+      return result.records.length > 0;
     } finally {
       await session.close();
     }

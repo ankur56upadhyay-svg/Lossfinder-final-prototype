@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const importController = require('../controllers/importController');
 const { authMiddleware } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { importBatchSchema } = require('../validators/importValidators');
+const { importBatchSchema, updateAnalysisSchema } = require('../validators/importValidators');
 
 const router = express.Router();
 
@@ -26,6 +26,8 @@ router.use(authMiddleware);
 router.post('/', importLimiter, validate(importBatchSchema), importController.createImport);
 router.get('/', importController.listImports);
 router.get('/:importId', importController.getImport);
+router.get('/:importId/analysis', importController.getImportAnalysis);
+router.patch('/:importId/analysis/:merchantKey', validate(updateAnalysisSchema), importController.updateImportAnalysis);
 router.delete('/:importId', importController.deleteImport);
 
 module.exports = router;

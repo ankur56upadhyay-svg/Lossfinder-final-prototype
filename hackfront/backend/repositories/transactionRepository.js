@@ -189,11 +189,15 @@ const transactionRepository = {
     }
   },
 
-  async getAllDebitTransactionsByUser(userId) {
+  async getAllDebitTransactionsByUser(userId, importId = null) {
     const session = getSession(neo4j.session.READ);
     try {
+      const importMatch = importId
+        ? 'MATCH (u)-[:CREATED_IMPORT]->(i:ImportBatch { importId: $importId })<-[:IN_IMPORT]-(t)'
+        : '';
       const result = await session.run(
         `MATCH (u:User { userId: $userId })-[:MADE]->(t:Transaction)
+         ${importMatch}
          OPTIONAL MATCH (t)-[:PAID_TO]->(m:Merchant)
          RETURN t.transactionId AS transactionId,
                 t.transactionDate AS date,
@@ -209,7 +213,7 @@ const transactionRepository = {
                 m.canonicalName AS canonicalName,
                 m.category AS category
          ORDER BY t.transactionDate ASC`,
-        { userId }
+        { userId, importId }
       );
 
       return result.records.map(rec => ({
