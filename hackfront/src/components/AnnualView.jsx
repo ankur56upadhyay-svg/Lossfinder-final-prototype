@@ -5,10 +5,10 @@ import CountUp from './CountUp';
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 const MECH_CONFIG = {
-  'Card':        { icon: 'credit_card',      color: '#4d7cf2' },
-  'UPI AutoPay': { icon: 'smartphone',       color: '#a64aec' },
-  'Bank mandate':{ icon: 'account_balance',  color: '#34b382' },
-  'App store':   { icon: 'apps',             color: '#f0a32e' },
+  'Card':        { icon: 'credit_card',      color: '#3B82F6' },
+  'UPI AutoPay': { icon: 'smartphone',       color: '#60A5FA' },
+  'Bank mandate':{ icon: 'account_balance',  color: '#93C5FD' },
+  'App store':   { icon: 'apps',             color: '#1D4ED8' },
   'Other':       { icon: 'payments',         color: '#6B7280' },
 };
 
@@ -22,12 +22,7 @@ function getMechConfig(mech) {
 }
 
 function getCategoryColor(name, index = 0) {
-  const category = name.toLowerCase();
-  if (/fitness|gym|health/.test(category)) return '#4d7cf2';
-  if (/stream|video|entertainment/.test(category)) return '#a64aec';
-  if (/shop|retail/.test(category)) return '#f97324';
-  if (/music|audio/.test(category)) return '#34b382';
-  return ['#4d7cf2', '#a64aec', '#f97324', '#34b382', '#f0a32e'][index % 5];
+  return ['#3B82F6', '#60A5FA', '#93C5FD', '#1D4ED8'][index % 4];
 }
 
 function fmt(n) {
@@ -137,8 +132,8 @@ function CategoryChart({ categories, theme }) {
     ctx.scale(dpr, dpr);
 
     const isDark = document.documentElement.classList.contains('dark');
-    const textColor = isDark ? '#8899AA' : '#5A6B80';
-    const gridColor = isDark ? '#2A3040' : '#E2E5EA';
+    const textColor = isDark ? '#9CA3AF' : '#475569';
+    const gridColor = isDark ? 'rgba(255,255,255,.08)' : '#E5E7EB';
 
     const pad = { top: 44, bottom: 40, left: 12, right: 12 };
     const chartW = W - pad.left - pad.right;
@@ -189,17 +184,18 @@ function CategoryChart({ categories, theme }) {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AnnualView() {
-  const { subscriptions, isDemo, bankName, navigateTo, theme } = useApp();
+  const { subscriptions, cancelledMap, isDemo, bankName, navigateTo, theme } = useApp();
   const [mode, setMode] = useState('yearly');
 
   const periodLabel = mode === 'yearly' ? 'year' : 'month';
   const periodShort  = mode === 'yearly' ? '/yr'  : '/mo';
 
-  const totals     = computeTotals(subscriptions, mode);
-  const categories = groupByCategory(subscriptions, mode);
-  const mechanisms = groupByMechanism(subscriptions, mode, totals.totalSpend);
-  const hikesData  = getHikesData(subscriptions, mode);
-  const savingsOpps = getSavingsOpportunities(subscriptions, mode);
+  const activeSubscriptions = subscriptions.filter(sub => !cancelledMap[sub.id]);
+  const totals     = computeTotals(activeSubscriptions, mode);
+  const categories = groupByCategory(activeSubscriptions, mode);
+  const mechanisms = groupByMechanism(activeSubscriptions, mode, totals.totalSpend);
+  const hikesData  = getHikesData(activeSubscriptions, mode);
+  const savingsOpps = getSavingsOpportunities(activeSubscriptions, mode);
 
   if (!subscriptions.length) {
     return (
@@ -236,22 +232,18 @@ export default function AnnualView() {
             )}
           </div>
           <p className="text-xs sm:text-sm text-[#5A6B80] dark:text-[#8899AA] mt-0.5">
-            Annual and monthly projections based on detected recurring auto-debits.
+            Annual and monthly projections based on detected recurring payments.
           </p>
         </div>
 
-        {/* Yearly / Monthly pill toggle */}
-        <div className="inline-flex items-center p-1 rounded-full bg-[#E2E5EA]/70 dark:bg-[#2A3040] border border-[#E2E5EA] dark:border-[#2A3040] self-start sm:self-auto">
+        <div className="lf-period-switch inline-flex items-center self-start sm:self-auto">
           {['yearly', 'monthly'].map(m => (
             <button
               key={m}
               type="button"
               onClick={() => setMode(m)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 ${
-                mode === m
-                  ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A] shadow-sm'
-                  : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'
-              }`}
+              aria-pressed={mode === m}
+              className="lf-period-option"
             >
               {m === 'yearly' ? 'Yearly Total' : 'Monthly Average'}
             </button>
@@ -264,7 +256,7 @@ export default function AnnualView() {
         <div className="af-card lf-analytics-stat p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA] mb-1">Total Projected Spend</div>
           <div className="text-4xl font-bold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]"><CountUp to={totals.totalSpend} prefix="₹" /></div>
-          <div className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Projected per {periodLabel} across all active mandates</div>
+          <div className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Projected per {periodLabel} across detected recurring payments</div>
         </div>
         <div className="af-card lf-analytics-stat p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA] mb-1">Active Subscriptions</div>
@@ -369,7 +361,7 @@ export default function AnnualView() {
                         <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
                         <span className="material-symbols-outlined text-base text-[#5A6B80] dark:text-[#8899AA]">{cfg.icon}</span>
                         <div>
-                          <div className="text-xs sm:text-sm font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">{m.name}</div>
+                          <div className="text-xs sm:text-sm font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">{m.name.replace('Bank mandate', 'Bank automatic payment')}</div>
                           <div className="text-[11px] text-[#5A6B80] dark:text-[#8899AA]">{m.count} active service{m.count === 1 ? '' : 's'}</div>
                         </div>
                       </div>
@@ -405,10 +397,10 @@ export default function AnnualView() {
                   <thead>
                     <tr className="border-b border-[#E2E5EA] dark:border-[#2A3040] text-[11px] font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA]">
                       <th className="py-2.5 px-3">Subscription</th>
-                      <th className="py-2.5 px-3">Old Price</th>
-                      <th className="py-2.5 px-3">New Price</th>
-                      <th className="py-2.5 px-3">Increase ({mode})</th>
-                      <th className="py-2.5 px-3">Hike %</th>
+                      <th className="py-2.5 px-3 text-right">Old price</th>
+                      <th className="py-2.5 px-3 text-right">New price</th>
+                      <th className="py-2.5 px-3 text-right">Increase ({mode})</th>
+                      <th className="py-2.5 px-3 text-right">Rise %</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -419,10 +411,10 @@ export default function AnnualView() {
                         onClick={() => navigateTo('detail', h.sub.id)}
                       >
                         <td className="py-3 px-3 font-semibold text-blue-600 dark:text-blue-400 hover:underline">{h.sub.name}</td>
-                        <td className="py-3 px-3 font-mono text-[#5A6B80] dark:text-[#8899AA]">{fmt(h.oldPrice)}</td>
-                        <td className="py-3 px-3 font-mono font-medium text-[#0B1F3A] dark:text-[#E8ECF1]">{fmt(h.newPrice)}</td>
-                        <td className="py-3 px-3 font-mono font-semibold text-red-600 dark:text-red-400">+{fmt(h.diff)}{periodShort}</td>
-                        <td className="py-3 px-3">
+                        <td className="py-3 px-3 text-right font-mono text-[#5A6B80] dark:text-[#8899AA]"><del>{fmt(h.oldPrice)}</del></td>
+                        <td className="py-3 px-3 text-right font-mono font-medium text-[#0B1F3A] dark:text-[#E8ECF1]">{fmt(h.newPrice)}</td>
+                        <td className="py-3 px-3 text-right font-mono font-semibold text-red-600 dark:text-red-400">+{fmt(h.diff)}{periodShort}</td>
+                        <td className="py-3 px-3 text-right">
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                             +{h.pct}%
                           </span>

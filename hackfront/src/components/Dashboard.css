@@ -1,0 +1,77 @@
+.lf-page-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.lf-heading-line { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+.lf-page-heading p, .lf-results-head p { color: var(--af-text2); font-size: 14px; margin-top: 8px; }
+.lf-heading-actions { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
+.lf-story { font-size: 16px; color: var(--af-text2); margin: 0 0 24px; line-height: 1.5; }
+.lf-story strong, .lf-decision-summary strong { color: var(--af-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.lf-metrics { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 24px; margin-bottom: 24px; }
+.lf-app-shell .lf-metric { padding: 24px; display: flex; flex-direction: column; gap: 8px; min-height: 160px; }
+.lf-eyebrow { font-size: 11px; letter-spacing: .08em; color: var(--af-text2); font-weight: 600; }
+.lf-metric > strong { font-size: 32px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--af-text); }
+.lf-metric > strong.lf-danger { color: var(--af-hike); }
+.lf-metric > strong.lf-warning { color: var(--af-amber); }
+.lf-metric small { color: var(--af-text2); font-size: 12px; }
+.lf-decision-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); border-radius: 16px; padding: 16px 24px; margin-bottom: 24px; font-size: 14px; color: var(--af-text2); }
+.lf-review-first { display: flex; align-items: center; justify-content: space-between; gap: 24px; background: var(--af-card); border: 1px solid var(--af-border); border-radius: 16px; padding: 16px 24px; margin-bottom: 24px; }
+.lf-review-first p { font-size: 14px; color: var(--af-text2); margin-top: 4px; }
+.lf-review-first strong { color: var(--af-text); }
+.lf-link, .lf-row-links button { color: var(--af-accent); font-size: 14px; font-weight: 600; background: none; border: 0; cursor: pointer; }
+.lf-link:hover, .lf-row-links button:hover { text-decoration: underline; }
+.lf-app-shell .lf-results { padding: 0; overflow: hidden; }
+.lf-results-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px; }
+.lf-results-head h2 { font-size: 20px; font-weight: 600; color: var(--af-text); }
+.lf-search { min-width: 280px; width: min(360px,100%); height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--af-border); border-radius: 12px; color: var(--af-text2); }
+.lf-search:focus-within { border-color: var(--af-accent); }
+.lf-search .material-symbols-outlined { font-size: 20px; }
+.lf-search input { min-width: 0; flex: 1; background: transparent; color: var(--af-text); outline: 0; border: 0; font-size: 14px; }
+.lf-search input::placeholder { color: var(--af-muted); }
+.lf-table-wrap { overflow-x: auto; }
+.lf-sub-table { min-width: 990px; }
+.lf-sub-table th, .lf-sub-table td { padding: 12px 16px; }
+.lf-sub-table th:first-child, .lf-sub-table td:first-child { padding-left: 24px; }
+.lf-sub-table th:last-child, .lf-sub-table td:last-child { padding-right: 24px; }
+.lf-sub-table th.lf-money-cell, .lf-sub-table td.lf-money-cell { text-align: right; white-space: nowrap; }
+.lf-money-cell strong { font-weight: 600; color: var(--af-text); font-variant-numeric: tabular-nums; }
+.lf-money-cell del { display: block; color: var(--af-muted); font-size: 12px; }
+.lf-service-name { display: block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--af-text); }
+.lf-service-reason { display: block; max-width: 280px; color: var(--af-text2); font-size: 12px; line-height: 1.35; margin-top: 4px; }
+.lf-narration { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; }
+.lf-sub-table td:nth-child(3) { color: var(--af-text2); }
+.lf-status { background: rgba(34,197,94,.1); color: var(--af-green); }
+.lf-status-hike { background: rgba(239,68,68,.1); color: var(--af-hike); }
+.lf-status-unused, .lf-status-unknown, .lf-status-trial { background: rgba(245,158,11,.1); color: var(--af-amber); }
+.lf-status-ended, .lf-status-cancelled { background: rgba(107,114,128,.12); color: var(--af-text2); }
+.lf-choice-group { display: flex; gap: 4px; }
+.lf-choice-group button { background: transparent; color: var(--af-text2); border: 1px solid var(--af-border); border-radius: 8px; min-height: 32px; padding: 0 8px; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.lf-choice-group button:hover, .lf-choice-group button.is-selected { color: var(--af-accent); background: rgba(59,130,246,.1); border-color: var(--af-accent); }
+.lf-row-links { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; white-space: nowrap; }
+.lf-row-links button { font-size: 12px; }
+.lf-cancelled-row { opacity: .65; }
+.lf-results-foot { border-top: 1px solid var(--af-border); color: var(--af-text2); font-size: 12px; padding: 16px 24px; }
+.lf-show-more { margin: 16px 24px; }
+.lf-no-results { padding: 32px 24px; color: var(--af-text2); }
+.lf-note { border: 1px solid rgba(245,158,11,.28); background: rgba(245,158,11,.08); color: var(--af-text2); padding: 12px 16px; border-radius: 12px; margin-bottom: 24px; font-size: 14px; }
+.lf-empty { max-width: 640px; margin: 48px auto; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+.lf-empty > .material-symbols-outlined { font-size: 32px; color: var(--af-accent); }
+.lf-empty p { color: var(--af-text2); font-size: 14px; }
+.lf-coach { position: fixed; top: 80px; right: max(24px, calc((100vw - 1120px)/2)); z-index: 60; width: min(350px, calc(100vw - 32px)); padding: 24px; background: var(--af-card); color: var(--af-text); border: 1px solid var(--af-accent); border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,.22); }
+.lf-coach-count { color: var(--af-accent); font-size: 11px; letter-spacing: .08em; font-weight: 600; }
+.lf-coach h2 { margin: 8px 0; font-size: 20px; font-weight: 600; }
+.lf-coach p { color: var(--af-text2); font-size: 14px; line-height: 1.5; }
+.lf-coach-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.lf-coach-target { outline: 2px solid var(--af-accent); outline-offset: 4px; border-radius: 12px; }
+@media (max-width: 767px) { .lf-page-heading, .lf-results-head, .lf-decision-summary, .lf-review-first { flex-direction: column; align-items: stretch; } .lf-metrics { grid-template-columns: 1fr; gap: 16px; } .lf-search { min-width: 0; width: 100%; } .lf-heading-actions .af-btn { flex: 1; } .lf-coach { right: 16px; } }
+@media (min-width: 768px) and (max-width: 1050px) { .lf-metrics { gap: 16px; } }
+@media (max-width: 600px) {
+  .lf-sub-table { min-width: 0; }
+  .lf-sub-table thead { display: none; }
+  .lf-sub-table tbody, .lf-sub-table tr, .lf-sub-table td { display: block; }
+  .lf-sub-table tr { padding: 16px 0; border-top: 1px solid var(--af-border); }
+  .lf-sub-table td, .lf-sub-table th { border: 0; padding: 8px 16px !important; min-height: 0; }
+  .lf-sub-table td:not(:first-child)::before { content: attr(data-label); display: block; color: var(--af-text2); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+  .lf-sub-table td.lf-money-cell { text-align: right; }
+  .lf-sub-table td.lf-money-cell::before { text-align: right; }
+  .lf-service-name, .lf-service-reason, .lf-narration { max-width: 100%; }
+  .lf-row-links { flex-direction: row; gap: 16px; }
+  .lf-choice-group { flex-wrap: wrap; }
+}

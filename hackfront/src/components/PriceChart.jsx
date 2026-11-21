@@ -48,10 +48,10 @@ export default function PriceChart({ history = [] }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const barColor = isDark ? '#4D9AFF' : '#0B5FD8';
-    const hikeColor = isDark ? '#FF6B6B' : '#D93025';
-    const textColor = isDark ? '#8899AA' : '#5A6B80';
-    const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+    const barColor = '#3B82F6';
+    const hikeColor = '#EF4444';
+    const textColor = isDark ? '#9CA3AF' : '#475569';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : '#E5E7EB';
 
     const dpr = window.devicePixelRatio || 1;
     const displayWidth = container.clientWidth || 500;

@@ -1,333 +1,179 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { computeTotals } from '../engine/totals';
 import CountUp from './CountUp';
 import PaymentReviewPanel from './PaymentReviewPanel';
+import { annualCost, attentionRank, money, paymentReason, potentialSavings, reportCsv } from './dashboardView';
+import './Dashboard.css';
+
+const TOUR_KEY = 'lf_dashboard_tour_done_v1';
+const PAGE_SIZE = 12;
+const decisionLabels = { keep: 'Keep', consider_cancelling: 'Plan to cancel', review: 'Remind me' };
+
+function guestStorageKey(bankName, subs) {
+  const source = bankName + ':' + subs.map(sub => sub.id).sort().join('|');
+  let hash = 2166136261;
+  for (let index = 0; index < source.length; index++) hash = Math.imul(hash ^ source.charCodeAt(index), 16777619);
+  return 'lf_guest_choices_' + (hash >>> 0).toString(16);
+}
+
+function CoachTour({ step, setStep, onClose }) {
+  const content = [
+    ['Your yearly picture', 'This is what you pay each year. Potential savings are estimates, so review the evidence before deciding.'],
+    ['Every payment in one place', 'Each row is a recurring payment we found. Price changes and likely unused services appear first.'],
+    ['Take action', 'See cancel steps for guided instructions. The app cannot cancel a bank payment for you.']
+  ];
+  return <div className="lf-coach" role="dialog" aria-label="Dashboard tour" aria-live="polite">
+    <span className="lf-coach-count">STEP {step + 1} OF 3</span>
+    <h2>{content[step][0]}</h2>
+    <p>{content[step][1]}</p>
+    <div className="lf-coach-actions">
+      <button type="button" className="af-btn af-btn-ghost" onClick={onClose}>Skip</button>
+      <button type="button" className="af-btn af-btn-primary" onClick={() => step < 2 ? setStep(step + 1) : onClose()}>{step < 2 ? 'Next' : 'Done'}</button>
+    </div>
+  </div>;
+}
 
 export default function Dashboard() {
   const {
-    subscriptions,
-    bankName,
-    isDemo,
-    demoSource,
-    cancelledMap,
-    navigateTo,
-    user,
-    paymentCandidates
+    subscriptions, bankName, isDemo, demoSource, cancelledMap, navigateTo, user,
+    paymentCandidates, reviewDecisions, saveReviewDecisions, showToast, statementCoverageDays, openAuthModal
   } = useApp();
+  const [search, setSearch] = useState('');
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const [guestChoices, setGuestChoices] = useState({});
+  const [optimistic, setOptimistic] = useState({});
+  const [tourStep, setTourStep] = useState(null);
+  const activeSubscriptions = subscriptions.filter(sub => !cancelledMap[sub.id]);
+  const totals = computeTotals(activeSubscriptions);
+  const storageKey = useMemo(() => guestStorageKey(bankName, subscriptions), [bankName, subscriptions]);
+  const choices = user && !isDemo ? reviewDecisions : { ...reviewDecisions, ...guestChoices };
+  const displayedChoices = { ...choices, ...optimistic };
+  const planned = subscriptions.filter(sub => displayedChoices[sub.id] === 'consider_cancelling' && !cancelledMap[sub.id]);
+  const plannedSavings = planned.reduce((sum, sub) => sum + annualCost(sub), 0);
+  const markedSavings = subscriptions.filter(sub => cancelledMap[sub.id]).reduce((sum, sub) => sum + annualCost(sub), 0);
+  const reviewFirst = [...activeSubscriptions].filter(sub => ['unused', 'hike'].includes(sub.status?.kind))
+    .sort((a, b) => (a.status?.kind === 'unused' ? 0 : 1) - (b.status?.kind === 'unused' ? 0 : 1) || annualCost(b) - annualCost(a))[0];
 
-  const totals = computeTotals(subscriptions);
-  const totalCount = subscriptions.length;
-  const subWord = totalCount === 1 ? 'subscription' : 'subscriptions';
-  const hikeCount = totals.hikeCount || 0;
-  const hikeWord = hikeCount === 1 ? 'price increase' : 'price increases';
+  useEffect(() => {
+    if (user && !isDemo) return;
+    try { setGuestChoices(JSON.parse(localStorage.getItem(storageKey) || '{}')); }
+    catch { setGuestChoices({}); }
+  }, [storageKey, user, isDemo]);
 
-  if (!subscriptions.length) {
-    return (
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <PaymentReviewPanel />
-        <div className="af-card flex flex-col items-center justify-center text-center py-16 px-6 shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-[#0B5FD8] dark:text-[#4D9AFF] flex items-center justify-center mb-4">
-            <span className="material-symbols-outlined text-4xl">search_off</span>
-          </div>
-          <h3 className="text-xl font-bold text-[#0B1F3A] dark:text-[#E8ECF1] mb-2">
-            {paymentCandidates?.length ? 'No confirmed subscriptions yet' : 'No recurring payments found'}
-          </h3>
-          <p className="text-sm text-[#5A6B80] dark:text-[#8899AA] max-w-md mb-6 leading-relaxed">
-            {paymentCandidates?.length ? 'Review the possible recurring payments above to include any subscriptions in your totals.' : 'We analyzed your statement but could not detect standing instructions, recurring cycles, or active subscriptions.'}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigateTo('upload')}
-            className="af-btn af-btn-primary"
-          >
-            <span className="material-symbols-outlined text-lg">upload_file</span>
-            <span>Upload another statement</span>
-          </button>
-        </div>
-      </main>
-    );
+  useEffect(() => {
+    if (!subscriptions.length) return;
+    if (!localStorage.getItem(TOUR_KEY) || sessionStorage.getItem('lf_tour_replay')) {
+      sessionStorage.removeItem('lf_tour_replay');
+      setTourStep(0);
+    }
+    const replay = () => setTourStep(0);
+    window.addEventListener('lf:replay-tour', replay);
+    return () => window.removeEventListener('lf:replay-tour', replay);
+  }, [subscriptions.length]);
+
+  useEffect(() => { setShown(PAGE_SIZE); }, [search, subscriptions]);
+
+  function finishTour() { localStorage.setItem(TOUR_KEY, '1'); setTourStep(null); }
+
+  async function choose(sub, choice, withUndo = true) {
+    const previous = displayedChoices[sub.id] ?? null;
+    setOptimistic(current => ({ ...current, [sub.id]: choice }));
+    const result = await saveReviewDecisions({ [sub.id]: choice });
+    if (result.failed) {
+      setOptimistic(current => ({ ...current, [sub.id]: previous }));
+      showToast('Your choice was not saved. Please try again.');
+      return;
+    }
+    if (!user || isDemo) {
+      const next = { ...guestChoices };
+      if (choice === null) delete next[sub.id]; else next[sub.id] = choice;
+      setGuestChoices(next);
+      localStorage.setItem(storageKey, JSON.stringify(next));
+    }
+    setOptimistic(current => { const next = { ...current }; delete next[sub.id]; return next; });
+    showToast(choice === null ? 'Choice removed.' : `${sub.name}: ${decisionLabels[choice]}.`, withUndo ? {
+      actionLabel: 'Undo', duration: 5000, onAction: () => choose(sub, previous, false)
+    } : {});
   }
 
-  function getStatusClasses(kind) {
-    const map = {
-      hike: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-      trial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      unused: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      ended: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-    };
-    return map[kind] || 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400';
+  function downloadReport() {
+    const csv = reportCsv(subscriptions, displayedChoices, cancelledMap);
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = 'loss-finder-report.csv'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Report downloaded as CSV.');
   }
 
-  function getStatusIcon(kind) {
-    const map = {
-      hike: 'trending_up',
-      trial: 'new_releases',
-      unused: 'visibility_off',
-      active: 'check_circle',
-      ended: 'cancel'
-    };
-    return map[kind] || 'help';
-  }
+  const filtered = [...subscriptions]
+    .sort((a, b) => attentionRank(a) - attentionRank(b) || annualCost(b) - annualCost(a))
+    .filter(sub => (sub.name + ' ' + (sub.code || '')).toLowerCase().includes(search.trim().toLowerCase()));
 
-  return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B1F3A] dark:text-[#E8ECF1] tracking-tight">
-              Subscriptions &amp; Recurring Payments
-            </h1>
-            {isDemo && (
-              <span className="af-demo-chip">
-                <span className="material-symbols-outlined text-xs">science</span> Demo Mode
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-[#5A6B80] dark:text-[#8899AA] mt-1">
-            {isDemo ? (
-              demoSource === 'aa' ? 'Viewing fictional Account Aggregator transactions. No bank is connected.' : 'Viewing sample recurring auto-debit profile'
-            ) : (
-              <>
-                Statement source:{' '}
-                <strong className="text-[#0B1F3A] dark:text-[#E8ECF1]">{bankName}</strong>
-                {user && !isDemo && (
-                  <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    Neo4j Synchronized
-                  </span>
-                )}
-              </>
-            )}
-          </p>
-        </div>
+  if (!subscriptions.length) return <main className="lf-standard-page">
+    <PaymentReviewPanel />
+    <div className="af-card lf-empty">
+      <span className="material-symbols-outlined">search_off</span>
+      <h1>{paymentCandidates?.length ? 'Review possible payments' : 'No subscriptions found'}</h1>
+      <p>{paymentCandidates?.length ? 'Confirm any subscriptions above to include them in your results.' : 'We did not find a recurring payment. Try a statement covering at least three months or review your file format.'}</p>
+      <button type="button" className="af-btn af-btn-primary" onClick={() => navigateTo('upload')}>Upload another statement</button>
+    </div>
+  </main>;
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigateTo('annual')}
-            className="af-btn af-btn-secondary text-xs py-2 px-4 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-base">bar_chart</span>
-            <span>Annual View</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigateTo('upload')}
-            className="af-btn af-btn-secondary text-xs py-2 px-4 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-base">upload_file</span>
-            <span>New Statement</span>
-          </button>
-        </div>
+  return <main className="lf-standard-page lf-dashboard">
+    <div className="lf-page-heading">
+      <div>
+        <div className="lf-heading-line"><h1>Subscriptions &amp; recurring payments</h1>{isDemo && <span className="af-demo-chip">Demo</span>}</div>
+        <p>{isDemo ? (demoSource === 'aa' ? 'Fictional account data. No bank is connected.' : 'Sample statement') : bankName}</p>
       </div>
-
-      <PaymentReviewPanel />
-
-      {/* Top 3 Distinct Metric Cards with proper gap spacing */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        {/* Card 1: Total Yearly Spend */}
-        <div className="af-card af-stat-blue flex flex-col justify-between p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA]">
-              ESTIMATED YEARLY SUBSCRIPTION SPEND
-            </span>
-            <span className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-[#0B5FD8] dark:text-[#4D9AFF] flex items-center justify-center">
-              <span className="material-symbols-outlined text-xl">payments</span>
-            </span>
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-[#0B1F3A] dark:text-[#E8ECF1] mb-1 font-sans">
-              <CountUp to={totals.yearlySpend} prefix="₹" />
-            </div>
-            <div className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
-              across {totalCount} {subWord}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Extra From Price Hikes */}
-        <div className="af-card af-stat-orange flex flex-col justify-between p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA]">
-              EXTRA FROM PRICE HIKES
-            </span>
-            <span className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center">
-              <span className="material-symbols-outlined text-xl">trending_up</span>
-            </span>
-          </div>
-          <div>
-            <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1 font-sans">
-              <CountUp to={totals.hikeExtra} prefix="₹" />
-            </div>
-            <div className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
-              per year from {hikeCount} {hikeWord}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Possibly Unused */}
-        {totals.unusedAmount === 0 ? (
-          <div className="af-card af-stat-purple flex flex-col justify-between p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA]">
-                POSSIBLY UNUSED
-              </span>
-              <span className="w-9 h-9 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-xl">check_circle</span>
-              </span>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1 font-sans">
-                <CountUp to={0} prefix="₹" />
-              </div>
-              <div className="text-xs text-green-700 dark:text-green-400 font-medium">
-                All services appear active
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="af-card af-stat-purple flex flex-col justify-between p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA]">
-                POSSIBLY UNUSED
-              </span>
-              <span className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-xl">visibility_off</span>
-              </span>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1 font-sans">
-                <CountUp to={totals.unusedAmount} prefix="₹" />
-              </div>
-              <div className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
-                per year on unknown-usage services
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="lf-heading-actions">
+        <button type="button" className="af-btn af-btn-secondary" onClick={downloadReport}>Download report</button>
+        <button type="button" className="af-btn af-btn-secondary" onClick={() => navigateTo('upload')}>New statement</button>
       </div>
+    </div>
 
-      {/* Subscriptions Data Table */}
-      <div className="af-card p-0 overflow-hidden shadow-sm">
-        <div className="px-5 py-4 border-b border-[#E2E5EA] dark:border-[#2A3040] flex items-center justify-between">
-          <h2 className="font-bold text-base text-[#0B1F3A] dark:text-[#E8ECF1]">
-            Subscription Results
-          </h2>
-          <span className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
-            {subscriptions.length} active &amp; past debits
-          </span>
-        </div>
+    <PaymentReviewPanel />
+    {statementCoverageDays !== null && statementCoverageDays < 90 && <p className="lf-note" role="note">Short statement: detection may miss yearly payments. Add more months for a fuller picture.</p>}
+    <p className="lf-story">You're paying <strong>{money(totals.yearlySpend)}</strong> a year across {activeSubscriptions.length} {activeSubscriptions.length === 1 ? 'subscription' : 'subscriptions'}. {potentialSavings(activeSubscriptions) > 0 ? <>You could review about <strong>{money(potentialSavings(activeSubscriptions))}</strong> in possible savings.</> : 'No clear savings opportunity was flagged.'}</p>
+    <div className={`lf-metrics ${tourStep === 0 ? 'lf-coach-target' : ''}`}>
+      <div className="af-card lf-metric"><span className="lf-eyebrow">YEARLY SUBSCRIPTION SPEND</span><strong><CountUp to={totals.yearlySpend} duration={600} prefix="₹" /></strong><small>Across {subscriptions.length} detected payments</small></div>
+      <div className="af-card lf-metric"><span className="lf-eyebrow">EXTRA FROM PRICE RISES</span><strong className="lf-danger"><CountUp to={totals.hikeExtra} duration={600} prefix="₹" /></strong><small>Estimated extra each year</small></div>
+      <div className="af-card lf-metric"><span className="lf-eyebrow">POSSIBLY UNUSED</span><strong className="lf-warning"><CountUp to={totals.unusedAmount} duration={600} prefix="₹" /></strong><small>Check before cancelling</small></div>
+    </div>
+    {reviewFirst && <div className="lf-review-first"><div><span className="lf-eyebrow">REVIEW FIRST</span><p><strong>{reviewFirst.name}</strong> {reviewFirst.status?.kind === 'unused' ? 'may be unused' : 'had a price rise'} · {money(annualCost(reviewFirst))} a year</p></div><button type="button" className="af-btn af-btn-primary" onClick={() => navigateTo('guide', reviewFirst.id)}>See cancel steps</button></div>}
 
-        <div className="overflow-x-auto">
-          <table className="af-table w-full">
-            <thead>
-              <tr>
-                <th className="py-3 px-4">Service</th>
-                <th className="py-3 px-4">Amount</th>
-                <th className="py-3 px-4">Frequency</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subscriptions.map((sub) => {
-                const isCancelled = !!cancelledMap[sub.id];
-                const statusKind = sub.status?.kind || 'active';
-                const statusLabel = sub.status?.label || 'Active';
-                const frequency = sub.per === 'yr' ? 'Yearly' : 'Monthly';
+    <div className="lf-decision-summary" aria-live="polite">
+      <span>You've marked {planned.length} {planned.length === 1 ? 'subscription' : 'subscriptions'} to cancel, with <strong>{money(plannedSavings)} a year</strong> in potential savings. {markedSavings > 0 && <span>Marked cancelled: {money(markedSavings)} a year.</span>}</span>
+      {!user && <button type="button" className="lf-link" onClick={() => openAuthModal('login')}>Sign in and upload a statement to save choices across devices</button>}
+    </div>
 
-                return (
-                  <tr
-                    key={sub.id}
-                    onClick={() => navigateTo('detail', sub.id)}
-                    className={`transition-colors ${isCancelled ? 'opacity-65' : ''}`}
-                  >
-                    {/* Service */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center">
-                        <span className={`font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] truncate max-w-[200px] sm:max-w-xs ${isCancelled ? 'line-through text-gray-500' : ''}`}>
-                          {sub.name}
-                        </span>
-                        {isCancelled && (
-                          <span className="af-pill bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 ml-2">
-                            Cancelled
-                          </span>
-                        )}
-                      </div>
-                      <div className="af-code mt-0.5 truncate max-w-[200px] sm:max-w-xs" title={sub.code}>
-                        {sub.code || ''}
-                      </div>
-                    </td>
-
-                    {/* Amount */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      {typeof sub.was === 'number' && sub.was < sub.price ? (
-                        <>
-                          <span className="line-through text-xs text-[#5A6B80] dark:text-[#8899AA] mr-1.5 font-mono">
-                            ₹{sub.was.toLocaleString('en-IN')}
-                          </span>
-                          <span className="font-bold text-[#0B1F3A] dark:text-[#E8ECF1] font-mono">
-                            ₹{sub.price.toLocaleString('en-IN')}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="font-bold text-[#0B1F3A] dark:text-[#E8ECF1] font-mono">
-                          ₹{sub.price.toLocaleString('en-IN')}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Frequency */}
-                    <td className="py-3.5 px-4 text-[#5A6B80] dark:text-[#8899AA] whitespace-nowrap">
-                      {frequency}
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className={`af-pill ${getStatusClasses(statusKind)}`}>
-                        <span className="material-symbols-outlined text-[13px]">
-                          {getStatusIcon(statusKind)}
-                        </span>
-                        <span>{statusLabel}</span>
-                      </span>
-                    </td>
-
-                    {/* Category */}
-                    <td className="py-3.5 px-4 text-[#5A6B80] dark:text-[#8899AA] whitespace-nowrap">
-                      {sub.category || sub.what || 'Other'}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-3 text-xs font-semibold">
-                        <button
-                          type="button"
-                          onClick={() => navigateTo('detail', sub.id)}
-                          className="text-[#0B5FD8] dark:text-[#4D9AFF] hover:underline focus:outline-none"
-                        >
-                          Details
-                        </button>
-                        <span className="text-[#E2E5EA] dark:text-[#2A3040]">|</span>
-                        <button
-                          type="button"
-                          onClick={() => navigateTo('guide', sub.id)}
-                          className="text-red-600 dark:text-red-400 hover:underline focus:outline-none"
-                        >
-                          Cancel guide
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+    <section className={`af-card lf-results ${tourStep === 1 ? 'lf-coach-target' : ''}`} aria-labelledby="results-title">
+      <div className="lf-results-head">
+        <div><h2 id="results-title">Detected subscriptions</h2><p>Sorted by what may need attention first</p></div>
+        <label className="lf-search"><span className="material-symbols-outlined" aria-hidden="true">search</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search service or transaction text" aria-label="Search subscriptions" /></label>
       </div>
-    </main>
-  );
+      {filtered.length === 0 ? <p className="lf-no-results">No service matches “{search}”. Try another name.</p> : <div className="lf-table-wrap">
+        <table className="af-table lf-sub-table">
+          <thead><tr><th>Service</th><th className="lf-money-cell">Amount</th><th>Frequency</th><th>Status</th><th>Decision</th><th>Actions</th></tr></thead>
+          <tbody>{filtered.slice(0, shown).map((sub, index) => {
+            const choice = displayedChoices[sub.id];
+            const cancelled = !!cancelledMap[sub.id];
+            const reason = paymentReason(sub);
+            const kind = sub.status?.kind || 'active';
+            return <tr key={sub.id} className={cancelled ? 'lf-cancelled-row' : ''}>
+              <td data-label="Service"><span className="lf-service-name" title={sub.name}>{sub.name}</span>{reason && <span className="lf-service-reason">{reason}</span>}<span className="af-code lf-narration" title={sub.code || ''}>{sub.code || ''}</span></td>
+              <td data-label="Amount" className="lf-money-cell">{Number.isFinite(sub.was) && sub.was < sub.price && <del>{money(sub.was)}</del>}<strong>{money(sub.price)}</strong></td>
+              <td data-label="Frequency">{sub.per === 'yr' ? 'Yearly' : 'Monthly'}</td>
+              <td data-label="Status"><span className={`af-pill lf-status lf-status-${cancelled ? 'cancelled' : kind}`}>{cancelled ? 'Marked cancelled' : sub.status?.label || 'Active'}</span></td>
+              <td data-label="Decision"><div className="lf-choice-group" aria-label={`Decision for ${sub.name}`}>{[['keep','Keep'],['consider_cancelling','Cancel'],['review','Remind me']].map(([value,label]) => <button key={value} type="button" className={choice === value ? 'is-selected' : ''} aria-pressed={choice === value} onClick={() => choose(sub, value)}>{label}</button>)}</div></td>
+              <td data-label="Actions"><div className="lf-row-links"><button type="button" onClick={() => navigateTo('guide', sub.id)} className={tourStep === 2 && index === 0 ? 'lf-coach-target' : ''}>See cancel steps</button><button type="button" onClick={() => navigateTo('detail', sub.id)}>Details</button></div></td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>}
+      {filtered.length > shown && <button type="button" className="af-btn af-btn-secondary lf-show-more" onClick={() => setShown(value => value + PAGE_SIZE)}>Show more ({filtered.length - shown} left)</button>}
+      <p className="lf-results-foot">“Cancel” saves your plan. Open the guide and complete cancellation with the provider; we cannot stop payments for you.</p>
+    </section>
+    {tourStep !== null && <CoachTour step={tourStep} setStep={setTourStep} onClose={finishTour} />}
+  </main>;
 }

@@ -20,6 +20,12 @@ export default function AccountAggregatorDemo() {
     }
   }
 
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="af-btn af-btn-secondary lf-aa-compact w-full mt-4">
+    <span className="material-symbols-outlined text-base" aria-hidden="true">account_balance</span>
+    Explore Account Aggregator demo
+    <span className="lf-aa-fictional">Fictional data</span>
+  </button>;
+
   return <section className="af-card mt-5 text-left" aria-labelledby="aa-demo-title">
     <div className="flex items-start gap-3">
       <span className="w-9 h-9 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">

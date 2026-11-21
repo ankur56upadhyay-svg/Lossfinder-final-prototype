@@ -46,6 +46,7 @@ export default function Upload() {
   // Info toggles
   const [showBankHelp, setShowBankHelp] = useState(false);
   const [showUsageHelp, setShowUsageHelp] = useState(false);
+  const [showUsageUpload, setShowUsageUpload] = useState(false);
 
   // Drag states
   const [bankDragOver, setBankDragOver] = useState(false);
@@ -201,31 +202,10 @@ export default function Upload() {
       <main className="flex-1 flex flex-col items-center justify-center w-full">
         <div className="lf-upload-content w-full max-w-[590px] mx-auto px-4 sm:px-6 py-8 flex flex-col items-center text-center">
 
-    {/* Back to Home button for Guest mode */}
-      {isGuest && (
-        <div className="w-full flex justify-start mb-4">
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="flex items-center gap-1 text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]"
-          >
-            <span className="material-symbols-outlined text-sm">arrow_back</span>
-            <span>Back to Home</span>
-          </button>
-        </div>
-      )}
-      
-      {/* Upload page identity */}
-      <div className="flex items-center justify-center gap-2.5 mb-3">
-        <span className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm">
-          <span className="material-symbols-outlined text-[19px]">account_balance_wallet</span>
-        </span>
-        <span className="text-base font-semibold tracking-tight text-[#0F172A] dark:text-[#F1F5F9]">Loss Finder</span>
-      </div>
-
       <h1 className="lf-upload-title text-2xl sm:text-3xl font-bold tracking-tight text-[#0F172A] dark:text-[#F1F5F9] mb-3">
-        Find the recurring payments hiding in your bank statement
+        Upload your statements
       </h1>
+      <p className="lf-upload-subtitle">Find recurring payments, price rises and subscriptions worth reviewing.</p>
 
       {/* Privacy Badge — Restored exact prototype UI */}
       {(!user || isGuest) ? (
@@ -365,8 +345,16 @@ export default function Upload() {
             </div>
           </div>
 
+          {!user && !loading && <button type="button" onClick={loadSampleData} className="af-btn af-btn-primary w-full mb-4">
+            <span className="material-symbols-outlined text-base">visibility</span>
+            Try demo statement
+          </button>}
+
+          <button type="button" className="lf-optional-toggle" onClick={() => setShowUsageUpload(value => !value)} aria-expanded={showUsageUpload}>
+            <span className="material-symbols-outlined text-base">add</span>{showUsageUpload ? 'Hide optional usage log' : usageFile ? `Usage log selected: ${usageFile.name}` : 'Add usage log (optional)'}
+          </button>
           {/* Usage CSV Dropzone (Optional) */}
-          <div className="mb-5">
+          {showUsageUpload && <div className="mb-5">
             <div className="flex items-center justify-between gap-1.5 mb-2">
               <label className="block text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] uppercase tracking-wider">
                 Usage Log CSV <span className="text-xs font-normal lowercase">(optional)</span>
@@ -440,38 +428,20 @@ export default function Upload() {
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Upload & Analyze Action or Spinner */}
           {!loading ? (
-            <div className="space-y-4">
+            <div className="lf-upload-actions space-y-3">
               <button
                 type="button"
                 onClick={handleAnalyze}
                 disabled={!bankFiles.length}
-                className="af-btn af-btn-primary lf-upload-submit w-full py-3.5 text-base shadow-sm"
+                className="af-btn af-btn-secondary lf-upload-submit w-full text-base"
               >
                 <span className="material-symbols-outlined text-lg">auto_awesome</span>
-                <span>Upload &amp; Analyze</span>
+                <span>Upload &amp; analyze statement</span>
               </button>
-
-              {/* OR Separator */}
-              <div className="relative my-4 flex items-center justify-center">
-                <div className="w-full border-t border-[#E2E5EA] dark:border-[#2A3040]" />
-                <span className="absolute px-3 bg-[#F5F6F8] dark:bg-[#0F1419] text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] uppercase tracking-wider">
-                  or
-                </span>
-              </div>
-
-              {/* Load Sample Button */}
-              {!user && <button
-                type="button"
-                onClick={loadSampleData}
-                className="af-btn af-btn-secondary w-full py-2.5 text-sm"
-              >
-                <span className="material-symbols-outlined text-base">visibility</span>
-                <span>Try Demo Statement</span>
-              </button>}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 gap-3">

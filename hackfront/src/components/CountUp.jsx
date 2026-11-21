@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function CountUp({
   to = 0,
-  duration = 1200,
+  duration = 600,
   prefix = '',
   suffix = '',
   format = true

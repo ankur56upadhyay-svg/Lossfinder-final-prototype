@@ -3,190 +3,74 @@ import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
   const {
-    view,
-    navigateTo,
-    theme,
-    toggleTheme,
-    user,
-    logout,
-    openDeleteAccountModal,
-    openAuthModal,
-    subscriptions,
-    isGuest,
-    isDemo
+    view, navigateTo, theme, toggleTheme, user, logout, openDeleteAccountModal,
+    openAuthModal, subscriptions, isDemo, isGuest, showToast
   } = useApp();
-
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
-  const mobileLinks = [
+  const intro = view === 'upload' && !user && !isGuest && !subscriptions.length;
+  const tabs = [
     ...(user ? [['history', 'My analyses']] : []),
-    ...((user || subscriptions.length) ? [['upload', 'New Statement']] : []),
-    ...(subscriptions.length && view !== 'upload' && view !== 'history'
-      ? [['dashboard', 'Dashboard'], ['annual', 'Annual View'], ...(!isDemo ? [['review', 'Review & renewals'], ['saved', 'Saved decisions']] : []), ['guide', 'Cancel guides']]
-      : [])
+    ['dashboard', 'Dashboard'], ['annual', 'Annual view'],
+    ['review', 'Review & renewals'], ['saved', 'Saved decisions'], ['guide', 'Cancel guides']
   ];
 
-  return (
-    <header className="lf-navbar w-full backdrop-blur-md sticky top-0 z-40 transition-colors bg-[#F8FAFC]/90 dark:bg-[#06090e]/90 border-b border-slate-200/40 dark:border-white/5">
-      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Left: Brand & Status */}
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => user ? navigateTo('history') : openAuthModal('login')}
-            className="flex items-center gap-2.5 text-left focus:outline-none"
-            title="Go to Home"
-          >
-            <span className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm">
-              <span className="material-symbols-outlined text-[19px]">account_balance_wallet</span>
-            </span>
-            <span className={`${user ? 'hidden sm:inline' : ''} font-bold text-base tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]`}>
-              Loss Finder
-            </span>
-          </button>
+  function openTab(target) {
+    setNavOpen(false);
+    if ((target === 'review' || target === 'saved') && (!user || isDemo)) {
+      navigateTo(target);
+      return;
+    }
+    if (!subscriptions.length && target !== 'history') {
+      showToast('Open an analysis or try the demo to see this page.');
+      return;
+    }
+    navigateTo(target);
+  }
 
-        </div>
+  function replayTour() {
+    if (!subscriptions.length) {
+      showToast('Open an analysis or try the demo before starting the tour.');
+      return;
+    }
+    if (view === 'dashboard') window.dispatchEvent(new Event('lf:replay-tour'));
+    else { sessionStorage.setItem('lf_tour_replay', '1'); navigateTo('dashboard'); }
+  }
 
-        {/* Center / Right: Nav links & Controls */}
-        <div className="flex items-center gap-3">
-          {user && <button type="button" onClick={() => navigateTo('history')}
-            className={`hidden xl:inline-flex px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${view === 'history' ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]' : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'}`}>
-            My analyses
-          </button>}
-          {subscriptions.length > 0 && view !== 'upload' && view !== 'history' && (
-            <nav className="lf-desktop-nav hidden xl:flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => navigateTo('dashboard')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  view === 'dashboard'
-                    ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]'
-                    : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'
-                }`}
-              >
-                Dashboard
-              </button>
-              <button
-                type="button"
-                onClick={() => navigateTo('annual')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  view === 'annual'
-                    ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]'
-                    : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'
-                }`}
-              >
-                Annual View
-              </button>
-              {!isDemo && <button type="button" onClick={() => navigateTo('review')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${view === 'review' ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]' : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'}`}>
-                Review &amp; renewals
-              </button>}
-              {!isDemo && <button type="button" onClick={() => navigateTo('saved')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${view === 'saved' ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]' : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'}`}>
-                Saved decisions
-              </button>}
-              <button
-                type="button"
-                onClick={() => navigateTo('guide')}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  view === 'guide'
-                    ? 'bg-[#0B1F3A] text-white dark:bg-[#E8ECF1] dark:text-[#0B1F3A]'
-                    : 'text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1]'
-                }`}
-              >
-                Cancel guides
-              </button>
-            </nav>
-          )}
-
-          {(user || subscriptions.length > 0) && view !== 'history' && <button type="button" onClick={() => navigateTo('upload')}
-            className="hidden xl:inline-flex items-center gap-1 text-xs font-semibold text-[#0B5FD8] dark:text-[#4D9AFF] px-2.5 py-1.5 hover:underline">
-            <span className="material-symbols-outlined text-sm">upload_file</span>
-            New Statement
-          </button>}
-
-          {mobileLinks.length > 0 && <div className="relative xl:hidden">
-            <button type="button" onClick={() => setNavOpen(open => !open)} aria-label="Open navigation" aria-expanded={navOpen}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[#5A6B80] dark:text-[#8899AA] hover:bg-black/5 dark:hover:bg-white/5">
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-            {navOpen && <nav className="absolute right-0 top-11 w-52 p-2 rounded-xl bg-white dark:bg-[#1C2028] border border-[#E2E5EA] dark:border-[#2A3040] shadow-xl z-50" aria-label="Mobile navigation">
-              {mobileLinks.map(([target, label]) => <button key={target} type="button" onClick={() => { navigateTo(target); setNavOpen(false); }}
-                className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 ${view === target ? 'text-[#0B5FD8] dark:text-[#4D9AFF]' : ''}`}>
-                {label}
-              </button>)}
-            </nav>}
+  return <header className="lf-navbar w-full sticky top-0 z-40">
+    <div className="mx-auto h-16 flex items-center justify-between gap-4">
+      <button type="button" onClick={() => user ? navigateTo('history') : navigateTo('upload')} className="lf-brand" aria-label="Loss Finder home">
+        <span className="lf-brand-icon material-symbols-outlined" aria-hidden="true">account_balance_wallet</span>
+        <span>Loss Finder</span>
+      </button>
+      {!intro && <nav className="lf-desktop-nav hidden xl:flex" aria-label="Main navigation">
+        {tabs.map(([target, label]) => {
+          const locked = (target === 'review' || target === 'saved') && (!user || isDemo);
+          return <button key={target} type="button" onClick={() => openTab(target)} aria-current={view === target ? 'page' : undefined} className={locked ? 'lf-locked-tab' : ''}>
+            {locked && <span className="material-symbols-outlined" aria-hidden="true">lock</span>}{label}
+          </button>;
+        })}
+      </nav>}
+      <div className="lf-nav-actions">
+        {!intro && (user || subscriptions.length > 0) && <button type="button" className="lf-nav-action" onClick={() => navigateTo('upload')}><span className="material-symbols-outlined" aria-hidden="true">upload_file</span><span className="hidden sm:inline">New statement</span></button>}
+        {!intro && <button type="button" className="lf-icon-button" onClick={replayTour} aria-label="Replay dashboard tour" title="Help"><span className="material-symbols-outlined" aria-hidden="true">help</span></button>}
+        <button type="button" className="lf-icon-button" onClick={toggleTheme} aria-label="Toggle theme" title="Toggle theme"><span className="material-symbols-outlined" aria-hidden="true">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span></button>
+        {!intro && <div className="relative xl:hidden">
+          <button type="button" className="lf-icon-button" onClick={() => setNavOpen(value => !value)} aria-expanded={navOpen} aria-label="Open navigation"><span className="material-symbols-outlined" aria-hidden="true">menu</span></button>
+          {navOpen && <nav className="lf-mobile-menu" aria-label="Mobile navigation">{tabs.map(([target,label]) => {
+            const locked = (target === 'review' || target === 'saved') && (!user || isDemo);
+            return <button key={target} type="button" aria-current={view === target ? 'page' : undefined} onClick={() => openTab(target)} className={locked ? 'lf-locked-tab' : ''}>{locked && <span className="material-symbols-outlined" aria-hidden="true">lock</span>}{label}</button>;
+          })}</nav>}
+        </div>}
+        {user ? <div className="relative">
+          <button type="button" className="lf-user-button" onClick={() => setMenuOpen(value => !value)} aria-expanded={menuOpen}><span className="material-symbols-outlined" aria-hidden="true">account_circle</span><span className="hidden sm:inline">Account</span></button>
+          {menuOpen && <div className="lf-account-menu">
+            <p>{user.email}</p>
+            <button type="button" onClick={() => { setMenuOpen(false); logout(); }}>Sign out</button>
+            <button type="button" onClick={() => { setMenuOpen(false); openDeleteAccountModal(); }}>Delete account</button>
           </div>}
-
-          {/* Theme Toggle */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#5A6B80] dark:text-[#8899AA] hover:text-[#0B1F3A] dark:hover:text-[#E8ECF1] hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-            title="Toggle theme"
-            aria-label="Toggle theme"
-          >
-            <span className="material-symbols-outlined text-xl">
-              {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-            </span>
-          </button>
-
-          {/* Auth Button or User Menu */}
-          {user ? (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(prev => !prev)}
-                className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border border-[#E2E5EA] dark:border-[#2A3040] text-xs font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-              >
-                <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
-                  {user.email ? user.email.charAt(0).toUpperCase() : 'U'}
-                </span>
-                <span className="hidden 2xl:inline max-w-[120px] truncate">{user.email}</span>
-                <span className="material-symbols-outlined text-sm">expand_more</span>
-              </button>
-
-              {menuOpen && (
-                <div
-                  className="absolute right-0 mt-2 w-48 rounded-xl bg-white dark:bg-[#1C2028] shadow-xl border border-[#E2E5EA] dark:border-[#2A3040] py-2 z-50 text-xs"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <div className="px-4 py-2 border-b border-[#E2E5EA] dark:border-[#2A3040]">
-                    <p className="font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] truncate">{user.email}</p>
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">{isDemo ? 'Viewing local demo' : 'Neo4j Synchronized'}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className="w-full text-left px-4 py-2 text-[#0B1F3A] dark:text-[#E8ECF1] hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-sm">logout</span>
-                    Sign out
-                  </button>
-                  <div className="my-1 border-t border-[#E2E5EA] dark:border-[#2A3040]" />
-                  <button
-                    type="button"
-                    onClick={openDeleteAccountModal}
-                    className="w-full text-left px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-sm">delete_forever</span>
-                    Delete account
-                  </button>
-                </div>
-              )}
-            </div>
-         ) : view !== 'upload' ? (
-            <button
-              type="button"
-              onClick={() => openAuthModal('login')}
-              className="af-btn af-btn-secondary text-xs py-1.5 px-3.5"
-            >
-              <span className="material-symbols-outlined text-base">account_circle</span>
-              <span>Sign in</span>
-            </button>
-          ) : null}
-        </div>
+        </div> : !intro && <button type="button" className="lf-user-button" onClick={() => openAuthModal('login')}>Sign in</button>}
       </div>
-    </header>
-  );
+    </div>
+  </header>;
 }

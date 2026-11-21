@@ -108,7 +108,7 @@ export default function DetailView() {
               </span>
 
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40">
-                {sub.mech || 'Card'}
+                {(sub.mech || 'Card').replace('Bank mandate', 'Bank automatic payment')}
               </span>
 
               {isCancelled && (
@@ -122,9 +122,9 @@ export default function DetailView() {
             {/* Raw Narration Code */}
             <div className="mt-3 af-code text-xs text-[#5A6B80] dark:text-[#8899AA] flex items-center gap-2 flex-wrap">
               <span className="font-sans font-medium text-xs text-[#5A6B80] dark:text-[#8899AA]">
-                Narration code:
+                Statement text:
               </span>
-              <span className="bg-[#F5F6F8] dark:bg-[#0F1419] px-2 py-0.5 rounded border border-[#E2E5EA] dark:border-[#2A3040]">
+              <span title="The payment description as it appeared on your bank statement" className="bg-[#F5F6F8] dark:bg-[#0F1419] px-2 py-0.5 rounded border border-[#E2E5EA] dark:border-[#2A3040]">
                 {sub.code || 'None'}
               </span>
             </div>
@@ -137,7 +137,7 @@ export default function DetailView() {
               className="af-btn af-btn-primary"
             >
               <span className="material-symbols-outlined text-base">cancel</span>
-              <span>View Cancel Guide</span>
+              <span>See cancel steps</span>
             </button>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function DetailView() {
               {typeof sub.was === 'number' && sub.was < sub.price && (
                 <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                   <span className="material-symbols-outlined text-sm">trending_up</span>
-                  <span>was ₹{sub.was.toLocaleString('en-IN')} (+₹{(sub.price - sub.was).toLocaleString('en-IN')})</span>
+                  <span><del>₹{sub.was.toLocaleString('en-IN')}</del> → ₹{sub.price.toLocaleString('en-IN')}</span>
                 </div>
               )}
             </div>
@@ -180,7 +180,7 @@ export default function DetailView() {
           </div>
 
           <div className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
-            Billed via <span className="font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">{sub.mech || 'Card'}</span>
+            Billed via <span className="font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">{(sub.mech || 'Card').replace('Bank mandate', 'Bank automatic payment')}</span>
           </div>
         </div>
 

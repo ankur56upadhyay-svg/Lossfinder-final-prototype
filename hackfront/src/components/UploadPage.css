@@ -1,69 +1,16 @@
-.lf-upload-page {
-  background: radial-gradient(ellipse 42% 32% at 50% 0%, rgba(59, 130, 246, 0.035), transparent 80%);
-}
-
-.dark .lf-upload-page {
-  background: radial-gradient(ellipse 43% 31% at 50% 0%, rgba(59, 89, 195, 0.095), transparent 82%);
-}
-
-.lf-upload-content {
-  max-width: 590px;
-}
-
-.lf-upload-title {
-  max-width: 520px;
-  line-height: 1.18;
-}
-
-.lf-upload-page .af-privacy {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.lf-upload-bank-dropzone {
-  min-height: 150px;
-  cursor: pointer;
-}
-
-.lf-upload-usage-dropzone {
-  min-height: 53px;
-  cursor: pointer;
-}
-
-.lf-upload-file-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: rgba(59, 130, 246, 0.08);
-  font-size: 24px;
-}
-
-.dark .lf-upload-file-icon {
-  background: rgba(59, 130, 246, 0.11);
-  border: 1px solid rgba(96, 165, 250, 0.09);
-}
-
-.lf-app-shell .lf-upload-submit:disabled {
-  opacity: 1;
-  background: #d1d5db;
-  border-color: #d1d5db;
-  color: #374151;
-  box-shadow: none;
-}
-
-.dark .lf-app-shell .lf-upload-submit:disabled {
-  background: #77777c;
-  border-color: #77777c;
-  color: #15171c;
-}
-
-@media (max-width: 600px) {
-  .lf-upload-content { padding-top: 2rem; padding-bottom: 2rem; }
-  .lf-upload-title { font-size: 1.65rem; }
-}
+.lf-upload-page { background: transparent; }
+.lf-upload-page > main { justify-content: flex-start; }
+.lf-upload-content { max-width: 590px; padding: 8px 0 16px; }
+.lf-page-stage .lf-upload-page main .lf-upload-title { font-family: 'Instrument Serif', Georgia, serif; font-size: 32px !important; font-weight: 500 !important; letter-spacing: -.02em !important; margin-bottom: 8px; }
+.lf-upload-subtitle { color: var(--af-text2); font-size: 14px; margin: 0 0 16px; }
+.lf-upload-page .af-privacy { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; background: rgba(34,197,94,.1); color: var(--af-green); border-color: rgba(34,197,94,.2); padding: 8px 12px; border-radius: 999px; margin-bottom: 16px; }
+.lf-upload-bank-dropzone { min-height: 160px; cursor: pointer; }
+.lf-upload-usage-dropzone { min-height: 52px; cursor: pointer; }
+.lf-upload-file-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(59,130,246,.1); font-size: 24px; }
+.lf-app-shell .lf-upload-submit:disabled, .dark .lf-app-shell .lf-upload-submit:disabled { opacity: .4; background: transparent; border-color: var(--af-border); color: var(--af-text); }
+.lf-upload-actions { margin-top: 8px; }
+.lf-optional-toggle { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--af-accent); background: none; border: 0; font-size: 14px; font-weight: 600; cursor: pointer; }
+.lf-aa-compact { gap: 8px; }
+.lf-aa-fictional { color: var(--af-text2); font-size: 12px; font-weight: 400; margin-left: auto; }
+.lf-upload-page footer { color: var(--af-text2); }
+@media (max-width: 600px) { .lf-upload-content { padding-top: 8px; } }

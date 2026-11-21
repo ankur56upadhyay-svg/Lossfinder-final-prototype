@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useLossFinderApi } from '../hooks/useLossFinderApi';
 import { api } from '../services/api';
 import { parseCSV, parseUsageCSV } from '../engine/parse';
@@ -60,6 +60,8 @@ export function AppProvider({ children }) {
   const [historyError, setHistoryError] = useState('');
   const [openingImportId, setOpeningImportId] = useState(null);
   const [activeImportId, setActiveImportId] = useState(null);
+  const [statementCoverageDays, setStatementCoverageDays] = useState(null);
+  const dashboardScroll = useRef(0);
 
   // Guest mode toggle (ephemeral in-memory state: wiped on refresh or tab close!)
   const [isGuest, setIsGuest] = useState(false);
@@ -96,6 +98,7 @@ export function AppProvider({ children }) {
     setHistoryError('');
     setOpeningImportId(null);
     setActiveImportId(null);
+    setStatementCoverageDays(null);
     setAuthModalOpen(false);
     setDeleteAccountModalOpen(false);
   }, []);
@@ -110,7 +113,8 @@ export function AppProvider({ children }) {
       id: Date.now(),
       message,
       actionLabel: options.actionLabel || null,
-      onAction: options.onAction || null
+      onAction: options.onAction || null,
+      duration: options.duration || 3000
     });
   }, []);
 
@@ -150,6 +154,7 @@ export function AppProvider({ children }) {
     setReviewDecisions({});
     setCancelledMap({});
     setActiveImportId(null);
+    setStatementCoverageDays(null);
     setSelectedSubId(null);
     setView('history');
     setHistoryLoading(true);
@@ -179,6 +184,9 @@ export function AppProvider({ children }) {
       setCancelledMap(Object.fromEntries(subs.filter(sub => sub.cancelled).map(sub => [sub.id, true])));
       setActiveImportId(importId);
       setBankName(result.import?.bankName || 'Uploaded Bank Statement');
+      const firstDate = result.import?.dateRangeStart;
+      const lastDate = result.import?.dateRangeEnd;
+      setStatementCoverageDays(firstDate && lastDate ? Math.round((new Date(lastDate) - new Date(firstDate)) / 86400000) : null);
       setIsDemo(false);
       setDemoSource(null);
       setSelectedSubId(null);
@@ -192,10 +200,15 @@ export function AppProvider({ children }) {
 
   // Navigate function
   const navigateTo = useCallback((targetView, subId = null) => {
+    if (view === 'dashboard' && targetView !== 'dashboard') dashboardScroll.current = window.scrollY;
     setView(targetView);
     setSelectedSubId(subId);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+    if (targetView === 'dashboard' && (view === 'detail' || view === 'guide')) {
+      requestAnimationFrame(() => window.scrollTo({ top: dashboardScroll.current, behavior: 'instant' }));
+    } else {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [view]);
 
   // Toggle cancellation
   const markCancelled = useCallback(async (subId, cancelled) => {
@@ -269,6 +282,7 @@ export function AppProvider({ children }) {
     setCancelledMap({});
     setReviewDecisions({});
     setActiveImportId(null);
+    setStatementCoverageDays(null);
   }, []);
 
   // Load sample data
@@ -280,6 +294,7 @@ export function AppProvider({ children }) {
     setSubscriptions(DEMO_SUBSCRIPTIONS);
     setReviewDecisions({});
     setActiveImportId(null);
+    setStatementCoverageDays(null);
     setView('dashboard');
     showToast('Loaded sample subscription profile');
   }, [showToast]);
@@ -296,6 +311,7 @@ export function AppProvider({ children }) {
     setReviewDecisions({});
     setCancelledMap({});
     setActiveImportId(null);
+    setStatementCoverageDays(214);
     setSelectedSubId(null);
     setView('dashboard');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -318,6 +334,8 @@ export function AppProvider({ children }) {
     if (!rawTxns || !rawTxns.length) {
       throw new Error('We could not read any transactions from this statement. Please check the file format.');
     }
+    const dates = rawTxns.map(tx => new Date(tx.transactionDate).getTime()).filter(Number.isFinite);
+    const coverageDays = dates.length ? Math.round((Math.max(...dates) - Math.min(...dates)) / 86400000) : null;
 
     const detectedBank = files.length > 1 ? `${files.length} bank statements` : (parsed[0]?.transactions.bank || files[0]?.name || 'Uploaded Bank Statement');
 
@@ -353,6 +371,7 @@ export function AppProvider({ children }) {
       setSubscriptions(flagged);
       setReviewDecisions({});
       setBankName(detectedBank);
+      setStatementCoverageDays(coverageDays);
       setIsDemo(false);
       setDemoSource(null);
       setView('dashboard');
@@ -400,6 +419,7 @@ export function AppProvider({ children }) {
         historyError,
         openingImportId,
         activeImportId,
+        statementCoverageDays,
         refreshAnalysisHistory,
         openAnalysis,
         navigateTo,
