@@ -387,7 +387,7 @@ export default function CancelGuide() {
       </div>
 
       {/* Escalation Path Card */}
-      <div className="af-card mb-6 shadow-sm border-l-4 border-l-amber-500">
+      <div className="af-card af-highlight-amber mb-6 shadow-sm">
         <h2 className="text-base font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] flex items-center gap-2 mb-2">
           <span className="material-symbols-outlined text-lg text-amber-500">gavel</span>
           <span>Escalation Path (If Merchant Refuses or Continues Debiting)</span>
@@ -448,7 +448,7 @@ export default function CancelGuide() {
                   onAction: () => markCancelled(sub.id, true)
                 });
               }}
-              className="af-btn af-btn-secondary text-xs shrink-0 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+              className="af-btn af-btn-secondary lf-confirm-button text-xs shrink-0"
             >
               <span className="material-symbols-outlined text-sm">undo</span>
               <span>Undo</span>

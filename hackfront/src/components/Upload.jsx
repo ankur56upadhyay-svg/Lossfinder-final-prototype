@@ -1,6 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { validateBankCsvHeaders, parseCSV } from '../engine/parse';
+import LandingBackdrop from './landing-effects/LandingBackdrop';
+import CursorGlow from './landing-effects/CursorGlow';
+import './LandingPage.css';
+import './UploadPage.css';
 
 export default function Upload() {
   const {
@@ -111,11 +115,41 @@ export default function Upload() {
     }
   }
 
+  if (!showUploadBoxes && !user) {
+    return (
+      <div className="lf-landing">
+        <LandingBackdrop />
+        <CursorGlow />
+        <main className="lf-landing-main">
+          <div className="lf-landing-content">
+            <h1 className="lf-landing-title">
+              <span className="lf-landing-mask"><span className="lf-landing-line lf-landing-line-one">Find the recurring payments</span></span>
+              <span className="lf-landing-mask"><span className="lf-landing-line lf-landing-line-two">hiding in your bank statement</span></span>
+            </h1>
+            <div className="lf-landing-privacy">
+              <span className="material-symbols-outlined" aria-hidden="true">lock</span>
+              Secure statement analysis. No bank login required.
+            </div>
+            <div className="lf-landing-actions">
+              <button type="button" onClick={() => { startGuestMode(); setShowUploadBoxes(true); }} className="lf-landing-button lf-landing-button-primary">
+                Continue as Guest
+              </button>
+              <button type="button" onClick={() => openAuthModal('login')} className="lf-landing-button lf-landing-button-secondary">
+                Sign in / Register for Neo4j Storage
+              </button>
+            </div>
+          </div>
+        </main>
+        <footer className="lf-landing-footer">Guest analysis stays in your browser. Signed-in imports save transactions to Neo4j.</footer>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[calc(100vh-64px)] flex flex-col">
+    <div className="lf-upload-page min-h-[calc(100vh-64px)] flex flex-col">
       {/* Main centered content */}
       <main className="flex-1 flex flex-col items-center justify-center w-full">
-        <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 flex flex-col items-center text-center">
+        <div className="lf-upload-content w-full max-w-[590px] mx-auto px-4 sm:px-6 py-8 flex flex-col items-center text-center">
 
     {/* Back to Home button for Guest mode */}
       {isGuest && (
@@ -131,20 +165,17 @@ export default function Upload() {
         </div>
       )}
       
-      {/* App Logo & Title */}
-      <div className="flex items-center justify-center gap-3 mb-2">
-        <span className="material-symbols-outlined text-[#0B5FD8] dark:text-[#4D9AFF] text-4xl">
-          account_balance_wallet
+      {/* Upload page identity */}
+      <div className="flex items-center justify-center gap-2.5 mb-3">
+        <span className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm">
+          <span className="material-symbols-outlined text-[19px]">account_balance_wallet</span>
         </span>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]">
-          Loss Finder
-        </h1>
+        <span className="text-base font-semibold tracking-tight text-[#0F172A] dark:text-[#F1F5F9]">Loss Finder</span>
       </div>
 
-      {/* Subtitle */}
-      <p className="text-base sm:text-lg text-[#5A6B80] dark:text-[#8899AA] mb-6">
+      <h1 className="lf-upload-title text-2xl sm:text-3xl font-bold tracking-tight text-[#0F172A] dark:text-[#F1F5F9] mb-3">
         Find the recurring payments hiding in your bank statement
-      </p>
+      </h1>
 
       {/* Privacy Badge — Restored exact prototype UI */}
       {(!user || isGuest) ? (
@@ -206,7 +237,7 @@ export default function Upload() {
 
           {/* Bank Statement CSV Dropzone (Required) */}
           <div className="mb-4">
-            <div className="flex items-center gap-1.5 mb-2">
+            <div className="flex items-center justify-between gap-1.5 mb-2">
               <label className="block text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] uppercase tracking-wider">
                 Bank Statement CSVs <span className="text-red-500">*</span>
               </label>
@@ -245,7 +276,7 @@ export default function Upload() {
                 setBankDragOver(false);
                 handleBankFileSelect(e.dataTransfer.files);
               }}
-              className={`af-dropzone flex flex-col items-center justify-center gap-2 p-6 transition-colors ${
+              className={`af-dropzone lf-upload-bank-dropzone flex flex-col items-center justify-center gap-2 p-6 transition-colors ${
                 bankDragOver ? 'active' : ''
               }`}
             >
@@ -257,7 +288,7 @@ export default function Upload() {
                 onChange={(e) => { handleBankFileSelect(e.target.files); e.target.value = ''; }}
                 className="hidden"
               />
-              <span className="material-symbols-outlined text-4xl text-[#0B5FD8] dark:text-[#4D9AFF]">
+              <span className="lf-upload-file-icon material-symbols-outlined text-4xl text-[#0B5FD8] dark:text-[#4D9AFF]">
                 upload_file
               </span>
 
@@ -285,7 +316,7 @@ export default function Upload() {
 
           {/* Usage CSV Dropzone (Optional) */}
           <div className="mb-5">
-            <div className="flex items-center gap-1.5 mb-2">
+            <div className="flex items-center justify-between gap-1.5 mb-2">
               <label className="block text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] uppercase tracking-wider">
                 Usage Log CSV <span className="text-xs font-normal lowercase">(optional)</span>
               </label>
@@ -324,7 +355,7 @@ export default function Upload() {
                 setUsageDragOver(false);
                 if (e.dataTransfer.files?.[0]) handleUsageFileSelect(e.dataTransfer.files[0]);
               }}
-              className={`af-dropzone flex items-center justify-center gap-3 py-3 px-4 transition-colors ${
+              className={`af-dropzone lf-upload-usage-dropzone flex items-center justify-center gap-3 py-3 px-4 transition-colors ${
                 usageDragOver ? 'active' : ''
               }`}
             >
@@ -367,7 +398,7 @@ export default function Upload() {
                 type="button"
                 onClick={handleAnalyze}
                 disabled={!bankFiles.length}
-                className="af-btn af-btn-primary w-full py-3.5 text-base shadow-sm"
+                className="af-btn af-btn-primary lf-upload-submit w-full py-3.5 text-base shadow-sm"
               >
                 <span className="material-symbols-outlined text-lg">auto_awesome</span>
                 <span>Upload &amp; Analyze</span>
@@ -388,7 +419,7 @@ export default function Upload() {
                 className="af-btn af-btn-secondary w-full py-2.5 text-sm"
               >
                 <span className="material-symbols-outlined text-base">visibility</span>
-                <span>Load sample data</span>
+                <span>Try Demo Statement</span>
               </button>}
             </div>
           ) : (

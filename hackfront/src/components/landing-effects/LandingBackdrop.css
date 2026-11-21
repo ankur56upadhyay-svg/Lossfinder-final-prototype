@@ -1,0 +1,503 @@
+/* ================================================================
+ * CINEMATIC LANDING BACKDROP (CRED Website Corridor & Light Sweep)
+ * ================================================================ */
+
+.af-landing-backdrop-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--backdrop-ambient);
+  transition: background-color var(--dur-fast) ease;
+}
+
+.af-corridor-both-dimmed .af-landing-backdrop-root {
+  opacity: 0.35;
+}
+
+/* Slow Camera Push Forward (~4.5% over intro timeline) */
+.af-camera-rig {
+  position: absolute;
+  inset: -3%;
+  width: 106%;
+  height: 106%;
+  overflow: hidden;
+  animation: afCameraPush var(--backdrop-duration) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: 50% 48%;
+}
+
+@keyframes afCameraPush {
+  0% {
+    transform: scale(1.0);
+  }
+  100% {
+    transform: scale(1.045);
+  }
+}
+
+/* Perspective Corridor Container */
+.af-corridor-container {
+  position: absolute;
+  inset: 0;
+  perspective: 1000px;
+  perspective-origin: 50% 48%;
+  overflow: hidden;
+}
+
+/* Colonnades (Left and Right Mirrored) */
+.af-colonnade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.af-colonnade-left {
+  left: 0;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: clamp(8px, 1.8vw, 24px);
+  padding-left: clamp(10px, 3.2vw, 56px);
+}
+
+.af-colonnade-right {
+  right: 0;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  gap: clamp(8px, 1.8vw, 24px);
+  padding-right: clamp(10px, 3.2vw, 56px);
+}
+
+/* Individual Pillars */
+.af-pillar {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #070a0f 0%, #0e141f 35%, #131c2b 50%, #0e141f 65%, #070a0f 100%);
+  box-shadow: 0 0 16px rgba(0, 0, 0, 0.6);
+  transition: border-color 200ms ease;
+  overflow: hidden;
+}
+
+html:not(.dark) .af-pillar {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 35%, #cbd5e1 50%, #e2e8f0 65%, #f1f5f9 100%);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.af-pillar-left {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+html:not(.dark) .af-pillar-left {
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.af-pillar-right {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+html:not(.dark) .af-pillar-right {
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.af-pillar-bevel {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 20%,
+    transparent 80%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+}
+
+html:not(.dark) .af-pillar-bevel {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    transparent 20%,
+    transparent 80%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+}
+
+/* Inward Traveling Light Beams (Synchronized Symmetrical Sweep) */
+.af-light-beam {
+  position: absolute;
+  top: 4%;
+  bottom: 4%;
+  width: 4px;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.95) 45%,
+    var(--backdrop-light) 50%,
+    var(--backdrop-glow) 58%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 16px var(--backdrop-light),
+    0 0 35px var(--backdrop-glow),
+    0 0 70px rgba(59, 130, 246, 0.45);
+}
+
+.af-light-beam-left {
+  left: 0;
+  animation: afSweepLeft var(--backdrop-duration) cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.af-light-beam-right {
+  right: 0;
+  animation: afSweepRight var(--backdrop-duration) cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes afSweepLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-30px) scaleY(0.7);
+    width: 8px;
+  }
+  10% {
+    opacity: 0.85;
+    transform: translateX(3vw) scaleY(0.85);
+    width: 6px;
+  }
+  42% {
+    opacity: 1;
+    transform: translateX(24vw) scaleY(0.96);
+    width: 4px;
+  }
+  68% {
+    opacity: 1;
+    transform: translateX(46vw) scaleY(1.0);
+    width: 3px;
+  }
+  78% {
+    opacity: 0.6;
+    transform: translateX(48.5vw) scaleY(1.05);
+    width: 2px;
+  }
+  84% {
+    opacity: 0;
+    transform: translateX(49vw) scaleY(1.0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(49vw);
+  }
+}
+
+@keyframes afSweepRight {
+  0% {
+    opacity: 0;
+    transform: translateX(30px) scaleY(0.7);
+    width: 8px;
+  }
+  10% {
+    opacity: 0.85;
+    transform: translateX(-3vw) scaleY(0.85);
+    width: 6px;
+  }
+  42% {
+    opacity: 1;
+    transform: translateX(-24vw) scaleY(0.96);
+    width: 4px;
+  }
+  68% {
+    opacity: 1;
+    transform: translateX(-46vw) scaleY(1.0);
+    width: 3px;
+  }
+  78% {
+    opacity: 0.6;
+    transform: translateX(-48.5vw) scaleY(1.05);
+    width: 2px;
+  }
+  84% {
+    opacity: 0;
+    transform: translateX(-49vw) scaleY(1.0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-49vw);
+  }
+}
+
+/* Floor Plane & Perspective Reflections */
+.af-corridor-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44%;
+  z-index: 2;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(11, 15, 23, 0.45) 35%,
+    rgba(6, 9, 14, 0.92) 100%
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+html:not(.dark) .af-corridor-floor {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(241, 245, 249, 0.45) 35%,
+    rgba(248, 250, 252, 0.96) 100%
+  );
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.af-floor-horizon-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 25%,
+    rgba(147, 197, 253, 0.3) 50%,
+    rgba(255, 255, 255, 0.08) 75%,
+    transparent 100%
+  );
+}
+
+html:not(.dark) .af-floor-horizon-line {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.04) 25%,
+    rgba(37, 99, 235, 0.2) 50%,
+    rgba(0, 0, 0, 0.04) 75%,
+    transparent 100%
+  );
+}
+
+.af-floor-light {
+  position: absolute;
+  top: 0;
+  height: 60px;
+  width: 140px;
+  border-radius: 50%;
+  filter: blur(20px);
+  mix-blend-mode: screen;
+  background: radial-gradient(ellipse at center, rgba(147, 197, 253, 0.6) 0%, rgba(59, 130, 246, 0.3) 40%, transparent 75%);
+}
+
+.af-floor-light-left {
+  left: 0;
+  animation: afFloorSweepLeft var(--backdrop-duration) cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.af-floor-light-right {
+  right: 0;
+  animation: afFloorSweepRight var(--backdrop-duration) cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes afFloorSweepLeft {
+  0% { opacity: 0; transform: translateX(-40px); }
+  12% { opacity: 0.5; transform: translateX(3vw); }
+  68% { opacity: 0.7; transform: translateX(43vw); }
+  80% { opacity: 0.3; transform: translateX(47vw); }
+  85% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes afFloorSweepRight {
+  0% { opacity: 0; transform: translateX(40px); }
+  12% { opacity: 0.5; transform: translateX(-3vw); }
+  68% { opacity: 0.7; transform: translateX(-43vw); }
+  80% { opacity: 0.3; transform: translateX(-47vw); }
+  85% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* Horizon Ambient Glow */
+.af-horizon-glow {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(800px, 90vw);
+  height: 420px;
+  border-radius: 50%;
+  filter: blur(60px);
+  background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.16) 0%, rgba(30, 58, 138, 0.05) 50%, transparent 75%);
+  animation: afBreathe 7s ease-in-out infinite alternate;
+  z-index: 1;
+}
+
+html:not(.dark) .af-horizon-glow {
+  background: radial-gradient(ellipse at center, rgba(37, 99, 235, 0.10) 0%, rgba(147, 197, 253, 0.04) 50%, transparent 75%);
+}
+
+/* Center Convergence Flare (Burst at ~4.8s) */
+.af-flare-wrapper {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Center Radial Flare Burst */
+.af-centre-flare-radial {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 260px;
+  height: 200px;
+  border-radius: 50%;
+  filter: blur(28px);
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(147, 197, 253, 0.75) 30%,
+    rgba(59, 130, 246, 0.4) 55%,
+    transparent 80%
+  );
+  animation: afFlareRadial var(--backdrop-duration) ease-out forwards;
+}
+
+html:not(.dark) .af-centre-flare-radial {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(96, 165, 250, 0.65) 30%,
+    rgba(37, 99, 235, 0.3) 55%,
+    transparent 80%
+  );
+}
+
+/* Anamorphic Horizontal Flare Streak Beam */
+.af-centre-flare-streak {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 520px;
+  height: 4px;
+  border-radius: 9999px;
+  filter: blur(3px);
+  mix-blend-mode: screen;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(59, 130, 246, 0.3) 25%,
+    rgba(255, 255, 255, 0.98) 50%,
+    rgba(59, 130, 246, 0.3) 75%,
+    transparent 100%
+  );
+  box-shadow: 0 0 18px var(--backdrop-light);
+  animation: afFlareStreak var(--backdrop-duration) ease-out forwards;
+}
+
+@keyframes afFlareRadial {
+  0%, 65% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  72% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+  80% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  90% {
+    opacity: 0.18;
+    transform: translate(-50%, -50%) scale(1.0);
+  }
+  100% {
+    opacity: 0.12;
+    transform: translate(-50%, -50%) scale(1.0);
+  }
+}
+
+@keyframes afFlareStreak {
+  0%, 66% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleX(0.1);
+  }
+  73% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scaleX(1.4);
+  }
+  80% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scaleX(1.1);
+  }
+  90% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleX(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleX(0.8);
+  }
+}
+
+/* Cinematic Vignette Overlay */
+.af-backdrop-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(6, 9, 14, 0.55) 75%, rgba(6, 9, 14, 0.96) 100%);
+}
+
+html:not(.dark) .af-backdrop-vignette {
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(248, 250, 252, 0.35) 75%, rgba(248, 250, 252, 0.92) 100%);
+}
+
+/* Headline Reading Scrim (protects text contrast completely) */
+.af-text-readability-scrim {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(850px, 94vw);
+  height: 420px;
+  border-radius: 50%;
+  filter: blur(40px);
+  z-index: 6;
+  background: radial-gradient(circle, rgba(6, 9, 14, 0.7) 0%, rgba(6, 9, 14, 0.45) 45%, transparent 75%);
+}
+
+html:not(.dark) .af-text-readability-scrim {
+  background: radial-gradient(circle, rgba(248, 250, 252, 0.82) 0%, rgba(248, 250, 252, 0.5) 45%, transparent 75%);
+}
+
+/* Responsive scaling on mobile: simplify pillars */
+@media (max-width: 768px) {
+  .af-pillar:nth-child(n+6) {
+    display: none;
+  }
+  .af-colonnade-left {
+    gap: 8px;
+    padding-left: 8px;
+  }
+  .af-colonnade-right {
+    gap: 8px;
+    padding-right: 8px;
+  }
+  .af-centre-flare-streak {
+    width: 280px;
+  }
+}

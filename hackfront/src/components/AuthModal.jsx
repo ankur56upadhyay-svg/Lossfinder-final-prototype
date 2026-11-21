@@ -47,7 +47,7 @@ export default function AuthModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-md bg-white dark:bg-[#1C2028] border border-[#E2E5EA] dark:border-[#2A3040] rounded-2xl shadow-2xl p-6 sm:p-8 relative">
+      <div className="lf-modal-panel w-full max-w-md bg-white dark:bg-[#1C2028] border border-[#E2E5EA] dark:border-[#2A3040] rounded-2xl shadow-2xl p-6 sm:p-8 relative">
         {/* Close Button */}
         <button
           type="button"

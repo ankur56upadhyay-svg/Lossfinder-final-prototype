@@ -16,7 +16,7 @@ export function AppProvider({ children }) {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('af_theme');
       if (stored) return stored;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'dark'; // Dark theme default
+      return 'dark';
     }
     return 'dark';
   });

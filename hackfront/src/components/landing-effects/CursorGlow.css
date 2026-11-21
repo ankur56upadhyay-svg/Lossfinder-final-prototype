@@ -1,0 +1,56 @@
+/* ================================================================
+ * CursorGlow.css — High-performance interactive cursor ambient glow
+ * ================================================================ */
+
+.af-cursor-glow-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.af-cursor-glow-orb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: blur(55px);
+  will-change: transform, opacity;
+  transform: translate(-50%, -50%) translate3d(-1000px, -1000px, 0);
+  opacity: 0;
+  transition: opacity 400ms ease;
+  background: radial-gradient(
+    circle,
+    rgba(59, 130, 246, 0.22) 0%,
+    rgba(99, 102, 241, 0.12) 35%,
+    rgba(59, 130, 246, 0.03) 60%,
+    transparent 75%
+  );
+}
+
+html:not(.dark) .af-cursor-glow-orb {
+  mix-blend-mode: multiply;
+  background: radial-gradient(
+    circle,
+    rgba(37, 99, 235, 0.14) 0%,
+    rgba(96, 165, 250, 0.07) 38%,
+    transparent 70%
+  );
+}
+
+.af-cursor-glow-visible {
+  opacity: 1;
+}
+
+/* Touch & Reduced-Motion accessibility */
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .af-cursor-glow-root {
+    display: none !important;
+  }
+}

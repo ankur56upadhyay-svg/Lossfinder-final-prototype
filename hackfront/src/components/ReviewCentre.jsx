@@ -82,7 +82,7 @@ export default function ReviewCentre() {
     </section>
 
     <section className="space-y-3" aria-label="Review subscriptions">
-      {subscriptions.map(sub => <article key={sub.id} className="af-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {subscriptions.map(sub => <article key={sub.id} className="af-card af-card-hover flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <button type="button" onClick={() => navigateTo('detail', sub.id)} className="font-semibold text-[#0B5FD8] dark:text-[#4D9AFF] hover:underline">{sub.name}</button>
           <p className="text-sm text-[#5A6B80] dark:text-[#8899AA]">₹{Number(sub.price || 0).toLocaleString('en-IN')}/{sub.per || 'mo'} · {sub.status?.label || 'Detected'} · {sub.category || 'Other'}</p>

@@ -22,7 +22,7 @@ export default function SavedDecisions() {
 
     {groups.map(group => {
       const items = subscriptions.filter(sub => reviewDecisions[sub.id] === group.key);
-      return <section key={group.key} className="af-card" aria-label={group.title}>
+      return <section key={group.key} className="af-card af-decision-section" aria-label={group.title}>
         <div className="flex items-baseline justify-between gap-2 mb-1">
           <h2 className="text-lg font-semibold">{group.title}</h2>
           <span className="text-sm font-semibold text-[#0B5FD8] dark:text-[#4D9AFF]">{items.length}</span>

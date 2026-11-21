@@ -12,7 +12,6 @@ export default function Navbar() {
     openDeleteAccountModal,
     openAuthModal,
     subscriptions,
-    bankName,
     isGuest
   } = useApp();
 
@@ -27,8 +26,8 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="w-full bg-[#FFFFFF]/90 dark:bg-[#1C2028]/90 backdrop-blur-md border-b border-[#E2E5EA] dark:border-[#2A3040] sticky top-0 z-40 transition-colors">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <header className="lf-navbar w-full backdrop-blur-md sticky top-0 z-40 transition-colors bg-[#F8FAFC]/90 dark:bg-[#06090e]/90 border-b border-slate-200/40 dark:border-white/5">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Left: Brand & Status */}
         <div className="flex items-center gap-4">
           <button
@@ -37,25 +36,16 @@ export default function Navbar() {
             className="flex items-center gap-2.5 text-left focus:outline-none"
             title="Go to Home"
           >
-            <span className="material-symbols-outlined text-[#0B5FD8] dark:text-[#4D9AFF] text-3xl">
-              account_balance_wallet
+            <span className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm">
+              <span className="material-symbols-outlined text-[19px]">account_balance_wallet</span>
             </span>
-            <span className={`${user ? 'hidden sm:inline' : ''} font-extrabold text-xl tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]`}>
+            <span className={`${user ? 'hidden sm:inline' : ''} font-bold text-base tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]`}>
               Loss Finder
             </span>
           </button>
 
-          {/* Statement loaded chip */}
-         {/* Statement loaded chip */}
-          {subscriptions.length > 0 && view !== 'upload' && view !== 'history' && (
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
-              <span className="material-symbols-outlined text-sm">check_circle</span>
-              <span className="truncate max-w-[160px]">{bankName}</span>
-            </div>
-          )}
         </div>
 
-        {/* Center / Right: Nav links & Controls */}
         {/* Center / Right: Nav links & Controls */}
         <div className="flex items-center gap-3">
           {user && <button type="button" onClick={() => navigateTo('history')}
@@ -63,7 +53,7 @@ export default function Navbar() {
             My analyses
           </button>}
           {subscriptions.length > 0 && view !== 'upload' && view !== 'history' && (
-            <nav className="hidden xl:flex items-center gap-1">
+            <nav className="lf-desktop-nav hidden xl:flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => navigateTo('dashboard')}

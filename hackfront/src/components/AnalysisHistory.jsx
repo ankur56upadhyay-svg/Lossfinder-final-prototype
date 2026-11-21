@@ -63,11 +63,16 @@ export default function AnalysisHistory() {
       {analysisHistory.map(item => {
         const names = item.fileNames?.length ? item.fileNames.join(', ') : item.bankName || 'Earlier statement';
         const busy = openingImportId === item.importId;
-        return <article key={item.importId} className="af-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="font-semibold truncate" title={names}>{names}</h2>
-            <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">{formatDate(item.importedAt)} · {item.transactionCount ?? 0} transactions</p>
-            {item.dateRangeStart && item.dateRangeEnd && <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Statement dates: {item.dateRangeStart} to {item.dateRangeEnd}</p>}
+        return <article key={item.importId} className="af-card af-card-hover flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="shrink-0 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 flex items-center justify-center" aria-hidden="true">
+              <span className="material-symbols-outlined text-xl">description</span>
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-semibold truncate" title={names}>{names}</h2>
+              <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">{formatDate(item.importedAt)} · {item.transactionCount ?? 0} transactions</p>
+              {item.dateRangeStart && item.dateRangeEnd && <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Statement dates: {item.dateRangeStart} to {item.dateRangeEnd}</p>}
+            </div>
           </div>
           <button type="button" onClick={() => handleOpen(item.importId)} disabled={!!openingImportId} className="af-btn af-btn-secondary shrink-0 disabled:opacity-50">
             {busy ? 'Opening…' : 'Open analysis'}

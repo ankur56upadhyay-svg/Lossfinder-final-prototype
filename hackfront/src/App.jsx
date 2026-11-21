@@ -12,6 +12,7 @@ import ReviewCentre from './components/ReviewCentre'
 import SavedDecisions from './components/SavedDecisions'
 import DeleteAccountModal from './components/DeleteAccountModal'
 import AnalysisHistory from './components/AnalysisHistory'
+import './AppTheme.css'
 
 export default function App() {
   const { view, loadingUser, user, openAuthModal, navigateTo } = useApp()
@@ -34,6 +35,7 @@ export default function App() {
 
   return (
     <div
+      className="lf-app-shell"
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -43,7 +45,7 @@ export default function App() {
       }}
     >
       <Navbar />
-      <div style={{ flex: 1 }}>
+      <div className="lf-page-stage" style={{ flex: 1 }}>
         {view === 'history' && user && <AnalysisHistory />}
         {view === 'upload'    && <Upload />}
         {view === 'dashboard' && <Dashboard />}

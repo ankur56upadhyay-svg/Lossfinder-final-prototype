@@ -1,0 +1,190 @@
+.lf-landing {
+  --anim-speed: 1;
+  --dur-fast: 180ms;
+  --backdrop-duration: 6.5s;
+  --backdrop-light: #60a5fa;
+  --backdrop-glow: #2563eb;
+  --backdrop-ambient: #f8fafc;
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100svh - 64px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.dark .lf-landing {
+  --backdrop-light: #93c5fd;
+  --backdrop-glow: #3b82f6;
+  --backdrop-ambient: #06090e;
+  background: #06090e;
+  color: #f1f5f9;
+}
+
+.lf-landing .af-landing-backdrop-root {
+  position: absolute;
+}
+
+.lf-landing-main {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1.5rem 5rem;
+}
+
+.lf-landing-content {
+  width: 100%;
+  max-width: 960px;
+  text-align: center;
+  transform: translateY(-11%);
+}
+
+.lf-landing-title {
+  margin: 0 auto 1.35rem;
+  max-width: 900px;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: clamp(2.65rem, 5.2vw, 4.4rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.lf-landing-mask {
+  display: block;
+  overflow: hidden;
+}
+
+.lf-landing-line {
+  display: block;
+  opacity: 0;
+  animation: lf-reveal-line 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.lf-landing-line-one { animation-delay: 120ms; }
+.lf-landing-line-two { animation-delay: 240ms; }
+
+.lf-landing-privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.42rem 0.75rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+  color: #64748b;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0;
+  animation: lf-fade-up 650ms cubic-bezier(0.16, 1, 0.3, 1) 380ms forwards;
+}
+
+.lf-landing-privacy .material-symbols-outlined {
+  font-size: 0.85rem;
+}
+
+.dark .lf-landing-privacy {
+  border-color: rgba(52, 211, 153, 0.16);
+  background: rgba(16, 185, 129, 0.07);
+  color: #5bc49a;
+}
+
+.lf-landing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  opacity: 0;
+  animation: lf-fade-up 650ms cubic-bezier(0.16, 1, 0.3, 1) 500ms forwards;
+}
+
+.lf-landing-button {
+  min-height: 2.35rem;
+  padding: 0.6rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.1;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.lf-landing-button:hover { transform: translateY(-2px); }
+.lf-landing-button:active { transform: translateY(0); }
+.lf-landing-button:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
+
+.lf-landing-button-primary {
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.lf-landing-button-primary:hover { background: #1e293b; }
+
+.lf-landing-button-secondary {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.65);
+  color: #475569;
+}
+
+.lf-landing-button-secondary:hover { border-color: #94a3b8; background: #fff; }
+
+.dark .lf-landing-button-primary { background: #f1f5f9; color: #0f172a; }
+.dark .lf-landing-button-primary:hover { background: #cbd5e1; }
+.dark .lf-landing-button-secondary { background: rgba(96, 165, 250, 0.045); border-color: rgba(96, 165, 250, 0.22); color: #8ab9ff; }
+.dark .lf-landing-button-secondary:hover { background: rgba(96, 165, 250, 0.11); border-color: rgba(96, 165, 250, 0.45); }
+
+.lf-landing-footer {
+  position: relative;
+  z-index: 3;
+  padding: 0.75rem 1rem 1.15rem;
+  color: #94a3b8;
+  font-size: 0.65rem;
+  text-align: center;
+  opacity: 0;
+  animation: lf-fade-in 700ms ease 800ms forwards;
+}
+
+@keyframes lf-reveal-line {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lf-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lf-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes afBreathe {
+  from { opacity: 0.75; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+
+@media (max-width: 600px) {
+  .lf-landing-main { padding: 3.5rem 1.25rem 4rem; }
+  .lf-landing-content { transform: translateY(-4%); }
+  .lf-landing-title { font-size: clamp(2.35rem, 9.5vw, 3.2rem); line-height: 1.08; }
+  .lf-landing-actions { flex-direction: column; }
+  .lf-landing-button { width: min(100%, 320px); min-height: 2.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-landing *, .lf-landing *::before, .lf-landing *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+  .lf-landing-button:hover { transform: none; }
+}

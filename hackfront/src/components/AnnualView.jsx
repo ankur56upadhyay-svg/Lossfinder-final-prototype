@@ -1,22 +1,33 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
+import CountUp from './CountUp';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 const MECH_CONFIG = {
-  'Card':        { icon: 'credit_card',      color: '#0B5FD8' },
-  'UPI AutoPay': { icon: 'smartphone',       color: '#10B981' },
-  'Bank mandate':{ icon: 'account_balance',  color: '#8B5CF6' },
-  'App store':   { icon: 'apps',             color: '#F59E0B' },
+  'Card':        { icon: 'credit_card',      color: '#4d7cf2' },
+  'UPI AutoPay': { icon: 'smartphone',       color: '#a64aec' },
+  'Bank mandate':{ icon: 'account_balance',  color: '#34b382' },
+  'App store':   { icon: 'apps',             color: '#f0a32e' },
   'Other':       { icon: 'payments',         color: '#6B7280' },
 };
 
 function getMechConfig(mech) {
   if (!mech) return MECH_CONFIG.Other;
+  if (/net.?bank/i.test(mech)) return MECH_CONFIG['Bank mandate'];
   for (const key of Object.keys(MECH_CONFIG)) {
     if (mech.toLowerCase().includes(key.toLowerCase())) return MECH_CONFIG[key];
   }
   return MECH_CONFIG.Other;
+}
+
+function getCategoryColor(name, index = 0) {
+  const category = name.toLowerCase();
+  if (/fitness|gym|health/.test(category)) return '#4d7cf2';
+  if (/stream|video|entertainment/.test(category)) return '#a64aec';
+  if (/shop|retail/.test(category)) return '#f97324';
+  if (/music|audio/.test(category)) return '#34b382';
+  return ['#4d7cf2', '#a64aec', '#f97324', '#34b382', '#f0a32e'][index % 5];
 }
 
 function fmt(n) {
@@ -126,11 +137,10 @@ function CategoryChart({ categories, theme }) {
     ctx.scale(dpr, dpr);
 
     const isDark = document.documentElement.classList.contains('dark');
-    const barColor = isDark ? '#4D9AFF' : '#0B5FD8';
     const textColor = isDark ? '#8899AA' : '#5A6B80';
     const gridColor = isDark ? '#2A3040' : '#E2E5EA';
 
-    const pad = { top: 12, bottom: 40, left: 12, right: 12 };
+    const pad = { top: 44, bottom: 40, left: 12, right: 12 };
     const chartW = W - pad.left - pad.right;
     const chartH = H - pad.top - pad.bottom;
     const count = Math.min(categories.length, 7);
@@ -138,15 +148,12 @@ function CategoryChart({ categories, theme }) {
 
     ctx.clearRect(0, 0, W, H);
 
-    // grid lines
+    // Keep a single baseline so the category colors carry the chart.
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 3; i++) {
-      const y = pad.top + (chartH / 3) * i;
-      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-    }
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top + chartH); ctx.lineTo(W - pad.right, pad.top + chartH); ctx.stroke();
 
-    const barW = Math.max(10, (chartW / count) * 0.6);
+    const barW = Math.max(10, Math.min(58, (chartW / count) * 0.56));
     const gap = chartW / count;
 
     for (let i = 0; i < count; i++) {
@@ -155,7 +162,7 @@ function CategoryChart({ categories, theme }) {
       const x = pad.left + gap * i + (gap - barW) / 2;
       const y = pad.top + chartH - barH;
 
-      ctx.fillStyle = barColor;
+      ctx.fillStyle = getCategoryColor(cat.name, i);
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0]) : ctx.rect(x, y, barW, barH);
       ctx.fill();
@@ -176,7 +183,7 @@ function CategoryChart({ categories, theme }) {
     return () => ro.disconnect();
   }, [draw]);
 
-  return <canvas ref={canvasRef} style={{ width: '100%', height: '220px', display: 'block' }} />;
+  return <canvas ref={canvasRef} style={{ width: '100%', height: '270px', display: 'block' }} />;
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
@@ -213,7 +220,7 @@ export default function AnnualView() {
   }
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+    <main className="lf-analytics-page max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
       {/* ── Header + toggle ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -254,19 +261,19 @@ export default function AnnualView() {
 
       {/* ── Overview 3-metric cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="af-card p-5 shadow-sm border-l-4 border-l-blue-600 dark:border-l-blue-400">
+        <div className="af-card lf-analytics-stat p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA] mb-1">Total Projected Spend</div>
-          <div className="text-3xl font-bold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]">{fmt(totals.totalSpend)}</div>
+          <div className="text-4xl font-bold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]"><CountUp to={totals.totalSpend} prefix="₹" /></div>
           <div className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Projected per {periodLabel} across all active mandates</div>
         </div>
-        <div className="af-card p-5 shadow-sm">
+        <div className="af-card lf-analytics-stat p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA] mb-1">Active Subscriptions</div>
-          <div className="text-3xl font-bold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]">{totals.activeCount}</div>
+          <div className="text-4xl font-bold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]"><CountUp to={totals.activeCount} /></div>
           <div className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Recurring services currently charging your accounts</div>
         </div>
-        <div className="af-card p-5 shadow-sm">
+        <div className="af-card lf-analytics-stat p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-wider text-[#5A6B80] dark:text-[#8899AA] mb-1">Average Spend</div>
-          <div className="text-3xl font-bold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]">{fmt(totals.avgSpend)}</div>
+          <div className="text-4xl font-bold tracking-tight text-[#0B1F3A] dark:text-[#E8ECF1]"><CountUp to={totals.avgSpend} prefix="₹" /></div>
           <div className="text-xs text-[#5A6B80] dark:text-[#8899AA] mt-1">Average cost per active subscription / {periodLabel}</div>
         </div>
       </div>
@@ -274,7 +281,7 @@ export default function AnnualView() {
       {/* ── Category chart + breakdown ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Chart */}
-        <div className="af-card shadow-sm">
+        <div className="af-card lf-analytics-chart shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] flex items-center gap-2">
               <span className="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">bar_chart</span>
@@ -289,34 +296,34 @@ export default function AnnualView() {
         </div>
 
         {/* Breakdown list */}
-        <div className="af-card shadow-sm">
+        <div className="af-card lf-analytics-breakdown shadow-sm">
           <h2 className="text-base font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-lg text-blue-600 dark:text-blue-400">category</span>
+            <span className="material-symbols-outlined text-lg text-purple-600 dark:text-purple-400">balance</span>
             Category Breakdown
           </h2>
           {categories.length === 0
             ? <p className="text-xs text-[#5A6B80] dark:text-[#8899AA] italic">No category data.</p>
             : (
               <div className="space-y-4">
-                {categories.map(cat => {
-                  const pctOfMax  = Math.round((cat.total / (categories[0].total || 1)) * 100);
+                {categories.map((cat, index) => {
                   const pctOfTotal = totals.totalSpend > 0 ? Math.round((cat.total / totals.totalSpend) * 100) : 0;
+                  const categoryColor = getCategoryColor(cat.name, index);
                   return (
-                    <div key={cat.name} className="space-y-1.5">
+                    <div key={cat.name} className="lf-category-row space-y-1.5">
                       <div className="flex items-center justify-between text-xs sm:text-sm">
                         <div>
                           <span className="font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">{cat.name}</span>
                           <span className="text-xs text-[#5A6B80] dark:text-[#8899AA] ml-2">({cat.count} sub{cat.count === 1 ? '' : 's'})</span>
                         </div>
-                        <div className="font-mono font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">
+                        <div className="font-mono font-semibold" style={{ color: categoryColor }}>
                           {fmt(cat.total)}
                           <span className="text-xs font-normal text-[#5A6B80] dark:text-[#8899AA] ml-1.5">({pctOfTotal}%)</span>
                         </div>
                       </div>
                       <div className="w-full h-2 rounded-full bg-[#E2E5EA]/80 dark:bg-[#2A3040] overflow-hidden">
                         <div
-                          className="h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-300"
-                          style={{ width: `${pctOfMax}%` }}
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{ width: `${pctOfTotal}%`, backgroundColor: categoryColor }}
                         />
                       </div>
                       <div className="text-[11px] text-[#5A6B80] dark:text-[#8899AA] truncate">

@@ -47,7 +47,7 @@ export default function DeleteAccountModal() {
         aria-modal="true"
         aria-labelledby="delete-account-title"
         aria-describedby="delete-account-description"
-        className="w-full max-w-md rounded-2xl border border-[#E2E5EA] dark:border-[#2A3040] bg-white dark:bg-[#1C2028] p-6 sm:p-8 shadow-2xl"
+        className="lf-modal-panel w-full max-w-md rounded-2xl border border-[#E2E5EA] dark:border-[#2A3040] bg-white dark:bg-[#1C2028] p-6 sm:p-8 shadow-2xl"
       >
         <div className="flex items-start gap-3">
           <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-3xl">warning</span>
