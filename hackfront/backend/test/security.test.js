@@ -34,6 +34,41 @@ test('guest cannot read subscriptions', async () => {
   assert.equal(response.headers.get('cache-control'), 'no-store');
 });
 
+test('session check returns an empty user for a guest or stale account', async () => {
+  const guest = await fetch(`${baseUrl}/api/auth/me`);
+  assert.equal(guest.status, 200);
+  assert.deepEqual(await guest.json(), { user: null });
+  assert.equal(guest.headers.get('cache-control'), 'no-store');
+
+  const originalFind = userRepository.findById;
+  userRepository.findById = async () => null;
+  try {
+    const token = jwt.sign({ userId: 'usr_missing', email: 'missing@example.com' }, process.env.JWT_SECRET);
+    const stale = await fetch(`${baseUrl}/api/auth/me`, { headers: { Cookie: `af_token=${token}` } });
+    assert.equal(stale.status, 200);
+    assert.deepEqual(await stale.json(), { user: null });
+  } finally {
+    userRepository.findById = originalFind;
+  }
+});
+
+test('session check still returns the authenticated account', async () => {
+  const originalFind = userRepository.findById;
+  userRepository.findById = async () => ({
+    userId: 'usr_valid', email: 'valid@example.com', createdAt: '2026-11-22T00:00:00.000Z'
+  });
+  try {
+    const token = jwt.sign({ userId: 'usr_valid', email: 'valid@example.com' }, process.env.JWT_SECRET);
+    const response = await fetch(`${baseUrl}/api/auth/me`, { headers: { Cookie: `af_token=${token}` } });
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).user, {
+      userId: 'usr_valid', email: 'valid@example.com', createdAt: '2026-11-22T00:00:00.000Z'
+    });
+  } finally {
+    userRepository.findById = originalFind;
+  }
+});
+
 test('allowed browser origin can make a write request', async () => {
   const response = await fetch(`${baseUrl}/api/auth/logout`, {
     method: 'POST',

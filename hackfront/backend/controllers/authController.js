@@ -120,14 +120,11 @@ const authController = {
 
   async me(req, res, next) {
     try {
+      if (!req.user) return res.status(200).json({ user: null });
+
       const user = await userRepository.findById(req.user.userId);
       if (!user) {
-        return res.status(404).json({
-          error: {
-            code: 'USER_NOT_FOUND',
-            message: 'User account not found.'
-          }
-        });
+        return res.status(200).json({ user: null });
       }
 
       res.status(200).json({

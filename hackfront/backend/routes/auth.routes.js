@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, optionalAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { registerSchema, loginSchema, deleteAccountSchema } = require('../validators/authValidators');
 
@@ -37,7 +37,7 @@ const deleteAccountLimiter = rateLimit({
 router.post('/register', authLimiter, validate(registerSchema), authController.register);
 router.post('/login', authLimiter, validate(loginSchema), authController.login);
 router.post('/logout', authController.logout);
-router.get('/me', authMiddleware, authController.me);
+router.get('/me', optionalAuth, authController.me);
 router.delete('/me/data', authMiddleware, deleteAccountLimiter, validate(deleteAccountSchema), authController.deleteUserData);
 
 module.exports = router;
