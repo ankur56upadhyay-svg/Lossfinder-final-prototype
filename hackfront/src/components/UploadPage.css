@@ -1,4 +1,5 @@
 .lf-upload-page { background: transparent; }
+.lf-no-nav .lf-upload-page { min-height: 100svh; }
 .lf-upload-page > main { justify-content: flex-start; }
 .lf-upload-content { max-width: 590px; padding: 8px 0 16px; }
 .lf-page-stage .lf-upload-page main .lf-upload-title { font-family: 'Instrument Serif', Georgia, serif; font-size: 32px !important; font-weight: 500 !important; letter-spacing: -.02em !important; margin-bottom: 8px; }

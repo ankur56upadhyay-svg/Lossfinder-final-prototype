@@ -14,7 +14,7 @@ import AnalysisHistory from './components/AnalysisHistory'
 import './AppTheme.css'
 
 export default function App() {
-  const { view, loadingUser, user, isDemo, openAuthModal, navigateTo } = useApp()
+  const { view, loadingUser, user, subscriptions, isDemo, openAuthModal, navigateTo } = useApp()
 
   if (loadingUser) {
     return (
@@ -34,7 +34,7 @@ export default function App() {
 
   return (
     <div
-      className="lf-app-shell"
+      className={`lf-app-shell${!user && !subscriptions.length ? ' lf-no-nav' : ''}`}
       style={{
         minHeight: '100vh',
         display: 'flex',

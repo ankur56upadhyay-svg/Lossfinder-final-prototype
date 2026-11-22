@@ -156,12 +156,12 @@ export default function Upload() {
                 Continue as Guest
               </button>
               <button type="button" onClick={() => openAuthModal('login')} className="lf-landing-button lf-landing-button-secondary">
-                Sign in / Register for Neo4j Storage
+                Sign in to save your data
               </button>
             </div>
           </div>
         </main>
-        <footer className="lf-landing-footer">Guest analysis stays in your browser. Signed-in imports save transactions to Neo4j.</footer>
+        <footer className="lf-landing-footer">Guest analysis stays in your browser. Signed-in imports are saved to your account.</footer>
       </div>
     );
   }
@@ -196,7 +196,7 @@ export default function Upload() {
             cloud_sync
           </span>
           <span>
-            Logged in as <strong>{user.email}</strong>. CSV/PDF imports save to Neo4j; the AA demo stays in this browser session.
+            Logged in as <strong>{user.email}</strong>. CSV/PDF imports are saved to your account; the phone login demo stays in this browser session.
           </span>
         </div>
       )}
@@ -222,7 +222,7 @@ export default function Upload() {
             className="af-btn af-btn-secondary w-full py-3 text-base"
           >
             <span className="material-symbols-outlined text-xl">account_circle</span>
-            <span>Sign in / Register for Neo4j Storage</span>
+            <span>Sign in to save your data</span>
           </button>
         </div>
       ) : (
@@ -352,7 +352,7 @@ export default function Upload() {
 
       {/* Footer */}
       <footer className="w-full text-center py-4 text-xs text-[#5A6B80] dark:text-[#8899AA]">
-        Guest analysis and the fictional AA demo stay in your browser session. Signed-in CSV/PDF imports save transactions to Neo4j.
+        Guest analysis and the fictional phone login demo stay in your browser session. Signed-in CSV/PDF imports are saved to your account.
       </footer>
     </div>
   );

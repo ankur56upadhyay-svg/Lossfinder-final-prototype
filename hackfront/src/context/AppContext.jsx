@@ -307,8 +307,8 @@ export function AppProvider({ children }) {
     const bankCount = accountIds.length;
     setIsGuest(!user);
     setIsDemo(true);
-    setDemoSource('aa');
-    setBankName(`AA demo - ${bankCount} fictional ${bankCount === 1 ? 'account' : 'accounts'}`);
+    setDemoSource('phone');
+    setBankName(`Phone login demo - ${bankCount} fictional ${bankCount === 1 ? 'account' : 'accounts'}`);
     setSubscriptions(flagged);
     setReviewDecisions({});
     setCancelledMap({});
@@ -317,7 +317,7 @@ export function AppProvider({ children }) {
     setSelectedSubId(null);
     setView('dashboard');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    showToast('AA demo loaded with fictional transactions. No bank was connected.');
+    showToast('Phone login demo loaded with fictional transactions. No bank was connected.');
   }, [user, showToast]);
 
   // Analyze normalized statement rows from CSV or PDF (either Guest or Authenticated)

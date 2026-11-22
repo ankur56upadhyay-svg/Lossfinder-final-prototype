@@ -119,7 +119,7 @@ export default function Dashboard() {
     <div className="lf-page-heading">
       <div>
         <div className="lf-heading-line"><h1>Subscriptions &amp; recurring payments</h1>{isDemo && <span className="af-demo-chip">Demo</span>}</div>
-        <p>{isDemo ? (demoSource === 'aa' ? 'Fictional account data. No bank is connected.' : 'Sample statement') : bankName}</p>
+        <p>{isDemo ? (demoSource === 'phone' ? 'Fictional account data. No bank is connected.' : 'Sample statement') : bankName}</p>
       </div>
       <div className="lf-heading-actions">
         {canDecide && <button type="button" className="af-btn af-btn-primary" disabled={!unsavedCount || saving} onClick={saveChoices}>{saving ? 'Saving…' : unsavedCount ? `Save ${unsavedCount} choice${unsavedCount === 1 ? '' : 's'}` : 'Save choices'}</button>}

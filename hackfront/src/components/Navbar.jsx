@@ -8,6 +8,7 @@ export default function Navbar() {
   } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  if (!user && !subscriptions.length) return null;
   const intro = view === 'upload' && !user && !isGuest && !subscriptions.length;
   const tabs = [
     ...(user ? [['history', 'My analyses']] : []),

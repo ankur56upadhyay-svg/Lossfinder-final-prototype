@@ -32,10 +32,10 @@ export default function AuthModal() {
     try {
       if (authModalMode === 'login') {
         await login(email, password);
-        showToast('Successfully signed in! Neo4j cloud synchronization active.');
+        showToast('Signed in. Your analyses can now be saved to your account.');
       } else {
         await register(email, password);
-        showToast('Account created and logged in! Ready for Neo4j persistence.');
+        showToast('Account created. Your analyses can now be saved.');
       }
       closeAuthModal();
     } catch (err) {
@@ -68,7 +68,7 @@ export default function AuthModal() {
               {authModalMode === 'login' ? 'Sign into Loss Finder' : 'Create Account'}
             </h2>
             <p className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
-              Persistent recurring payment analytics with Neo4j
+              Sign in to save your analyses and decisions.
             </p>
           </div>
         </div>
@@ -154,7 +154,7 @@ export default function AuthModal() {
         </form>
 
         <p className="text-[11px] text-center text-[#5A6B80] dark:text-[#8899AA] mt-4">
-          Data is protected with Bcrypt hashing and isolated per user in Neo4j Aura.
+          Sign in to keep your uploaded analyses and choices in your account.
         </p>
 
         {/* Back to Home link */}
