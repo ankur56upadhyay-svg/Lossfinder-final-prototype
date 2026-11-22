@@ -1,4 +1,4 @@
-const flaggedKinds = new Set(['hike', 'trial', 'unused']);
+const flaggedKinds = new Set(['hike', 'trial']);
 const inactiveKinds = new Set(['ended', 'cancelled', 'ignored']);
 
 export function getCancellationCandidates(subscriptions, reviewDecisions = {}, cancelledMap = {}) {

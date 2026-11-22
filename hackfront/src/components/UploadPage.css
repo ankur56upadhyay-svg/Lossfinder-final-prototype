@@ -5,11 +5,12 @@
 .lf-upload-subtitle { color: var(--af-text2); font-size: 14px; margin: 0 0 16px; }
 .lf-upload-page .af-privacy { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; background: rgba(34,197,94,.1); color: var(--af-green); border-color: rgba(34,197,94,.2); padding: 8px 12px; border-radius: 999px; margin-bottom: 16px; }
 .lf-upload-bank-dropzone { min-height: 160px; cursor: pointer; }
-.lf-upload-usage-dropzone { min-height: 52px; cursor: pointer; }
+.lf-upload-back { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; color: var(--af-text2); font-size: 14px; background: transparent; border: 0; cursor: pointer; margin-bottom: 16px; }
+.lf-upload-back:hover { color: var(--af-accent); }
+.lf-upload-back .material-symbols-outlined { font-size: 18px; }
 .lf-upload-file-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(59,130,246,.1); font-size: 24px; }
 .lf-app-shell .lf-upload-submit:disabled, .dark .lf-app-shell .lf-upload-submit:disabled { opacity: .4; background: transparent; border-color: var(--af-border); color: var(--af-text); }
 .lf-upload-actions { margin-top: 8px; }
-.lf-optional-toggle { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--af-accent); background: none; border: 0; font-size: 14px; font-weight: 600; cursor: pointer; }
 .lf-aa-compact { gap: 8px; }
 .lf-aa-fictional { color: var(--af-text2); font-size: 12px; font-weight: 400; margin-left: auto; }
 .lf-upload-page footer { color: var(--af-text2); }

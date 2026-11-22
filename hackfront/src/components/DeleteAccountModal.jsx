@@ -54,7 +54,7 @@ export default function DeleteAccountModal() {
           <div>
             <h2 id="delete-account-title" className="text-xl font-bold text-[#0B1F3A] dark:text-[#E8ECF1]">Delete your account?</h2>
             <p id="delete-account-description" className="mt-2 text-sm text-[#5A6B80] dark:text-[#AAB6C5]">
-              This permanently removes your account, imported transactions, subscriptions, usage history and saved decisions. You cannot undo this action.
+              This permanently removes your account, imported transactions, subscriptions and saved decisions. You cannot undo this action.
             </p>
           </div>
         </div>

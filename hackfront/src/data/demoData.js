@@ -40,11 +40,9 @@ export const DEMO_SUBSCRIPTIONS = [
     price: 1850,
     per: 'mo',
     was: null,
-    status: { kind: 'unused', label: 'Likely unused' },
+    status: { kind: 'active', label: 'Active' },
     evidence: [
       'Found 8 monthly debits of ₹1,850 via NACH bank mandate.',
-      'Last physical gym check-in was 94 days ago.',
-      '3 consecutive auto-debits totaling ₹5,550 paid with zero attendance recorded.',
       'Mandate continues active status through bank standing instructions.'
     ],
     history: [
@@ -52,7 +50,7 @@ export const DEMO_SUBSCRIPTIONS = [
       { l: "Dec '25", a: 1850 }, { l: "Jan '26", a: 1850 }, { l: "Feb '26", a: 1850 },
       { l: "Mar '26", a: 1850 }, { l: "Apr '26", a: 1850 }
     ],
-    explain: 'A monthly fitness subscription paid through an automated bank mandate. Charges continue every month regardless of gym check-in frequency.'
+    explain: 'A monthly fitness subscription paid through an automated bank mandate. Check the provider account if you want to manage it.'
   },
   {
     id: 'spotify',
@@ -69,7 +67,6 @@ export const DEMO_SUBSCRIPTIONS = [
     evidence: [
       'Found 12 monthly charges of ₹119 consistently on the 14th of each month.',
       'No unannounced price increases detected.',
-      'Active streaming activity verified within the past 4 days.',
       'Authorized via UPI AutoPay recurring standing instruction.'
     ],
     history: [
@@ -194,10 +191,3 @@ export const SAMPLE_STATEMENT_CSV = `Date,Narration,Withdrawal Amount(INR),Depos
 14/04/2026,UPI/AUTOPAY/SPOTIFY_INDIA/8811,119.00,,20796.00
 15/04/2026,APPLE/SONYLIV/IN_SUB,299.00,,20497.00
 25/04/2026,CARD/RECUR/AMZN_PRIME,1499.00,,18998.00`;
-
-export const SAMPLE_USAGE_CSV = `Date,Service,Activity
-05/09/2025,Cult.fit,Gym check-in
-12/09/2025,Cult.fit,Gym check-in
-28/09/2025,Cult.fit,Gym check-in
-15/04/2026,Spotify,Streamed 25 tracks
-20/04/2026,Netflix,Streamed 2 episodes`;

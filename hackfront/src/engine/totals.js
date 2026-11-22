@@ -5,16 +5,13 @@
 export function computeTotals(subs = []) {
   let yearlySpend = 0;
   let hikeExtra = 0;
-  let unusedAmount = 0;
   let hikeCount = 0;
-  let unusedCount = 0;
 
   for (let i = 0; i < subs.length; i++) {
     const s = subs[i];
     const isMonthly = s.per !== 'yr';
     const isEnded = s.status && s.status.kind === 'ended';
     const hasHike = typeof s.was === 'number' && s.price > s.was;
-    const isUnused = s.status && (s.status.kind === 'unused' || s.status.kind === 'unknown');
 
     // 1. Total yearly spend for non-ended subscriptions
     if (!isEnded) {
@@ -30,18 +27,11 @@ export function computeTotals(subs = []) {
       hikeCount++;
     }
 
-    // 3. Unused or unknown usage spend
-    if (isUnused && !isEnded) {
-      unusedAmount += isMonthly ? (s.price * 12) : s.price;
-      unusedCount++;
-    }
   }
 
   return {
     yearlySpend,
     hikeExtra,
-    unusedAmount,
-    hikeCount,
-    unusedCount
+    hikeCount
   };
 }

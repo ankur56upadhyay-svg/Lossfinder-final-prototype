@@ -12,15 +12,12 @@ export default function Navbar() {
   const tabs = [
     ...(user ? [['history', 'My analyses']] : []),
     ['dashboard', 'Dashboard'], ['annual', 'Annual view'],
-    ['review', 'Review & renewals'], ['saved', 'Saved decisions'], ['guide', 'Cancel guides']
+    ['saved', 'Saved decisions'], ['guide', 'Cancel guides']
   ];
 
   function openTab(target) {
     setNavOpen(false);
-    if ((target === 'review' || target === 'saved') && (!user || isDemo)) {
-      navigateTo(target);
-      return;
-    }
+    if (target === 'saved' && (!user || isDemo)) { navigateTo(target); return; }
     if (!subscriptions.length && target !== 'history') {
       showToast('Open an analysis or try the demo to see this page.');
       return;
@@ -45,7 +42,7 @@ export default function Navbar() {
       </button>
       {!intro && <nav className="lf-desktop-nav hidden xl:flex" aria-label="Main navigation">
         {tabs.map(([target, label]) => {
-          const locked = (target === 'review' || target === 'saved') && (!user || isDemo);
+          const locked = target === 'saved' && (!user || isDemo);
           return <button key={target} type="button" onClick={() => openTab(target)} aria-current={view === target ? 'page' : undefined} className={locked ? 'lf-locked-tab' : ''}>
             {locked && <span className="material-symbols-outlined" aria-hidden="true">lock</span>}{label}
           </button>;
@@ -58,7 +55,7 @@ export default function Navbar() {
         {!intro && <div className="relative xl:hidden">
           <button type="button" className="lf-icon-button" onClick={() => setNavOpen(value => !value)} aria-expanded={navOpen} aria-label="Open navigation"><span className="material-symbols-outlined" aria-hidden="true">menu</span></button>
           {navOpen && <nav className="lf-mobile-menu" aria-label="Mobile navigation">{tabs.map(([target,label]) => {
-            const locked = (target === 'review' || target === 'saved') && (!user || isDemo);
+            const locked = target === 'saved' && (!user || isDemo);
             return <button key={target} type="button" aria-current={view === target ? 'page' : undefined} onClick={() => openTab(target)} className={locked ? 'lf-locked-tab' : ''}>{locked && <span className="material-symbols-outlined" aria-hidden="true">lock</span>}{label}</button>;
           })}</nav>}
         </div>}

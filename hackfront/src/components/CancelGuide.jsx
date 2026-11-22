@@ -106,7 +106,6 @@ export default function CancelGuide() {
       const map = {
         hike: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
         trial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-        unused: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
         active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
         ended: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
       };
@@ -117,7 +116,6 @@ export default function CancelGuide() {
       const map = {
         hike: 'trending_up',
         trial: 'new_releases',
-        unused: 'visibility_off',
         active: 'check_circle',
         ended: 'cancel'
       };
@@ -148,19 +146,19 @@ export default function CancelGuide() {
             <h2 className="mt-3 text-lg font-semibold text-[#0B1F3A] dark:text-[#E8ECF1]">No subscriptions to show</h2>
             <p className="mt-2 text-sm text-[#5A6B80] dark:text-[#8899AA] max-w-lg mx-auto">
               {user
-                ? 'All detected subscriptions are marked Keep or are no longer active. Change a choice in the Review Centre if you want to see its cancellation guide here.'
+                ? 'All detected subscriptions are marked Keep or are no longer active. Change a choice on the dashboard to see its cancellation guide here.'
                 : 'This statement has no active subscriptions. Upload a newer statement to check again.'}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
-              {user && <button type="button" onClick={() => navigateTo('review')} className="af-btn af-btn-primary">Review subscriptions</button>}
+              {user && <button type="button" onClick={() => navigateTo('dashboard')} className="af-btn af-btn-primary">View subscriptions</button>}
               <button type="button" onClick={() => navigateTo('dashboard')} className="af-btn af-btn-secondary">View dashboard</button>
             </div>
           </div>
         ) : <div className="space-y-3">
           {candidates.map(s => {
-            const kind = s.status?.kind || 'active';
+            const kind = ['unused', 'unknown'].includes(s.status?.kind) ? 'active' : s.status?.kind || 'active';
             const chosenByUser = reviewDecisions[s.id] === 'consider_cancelling';
-            const flagged = !reviewDecisions[s.id] && ['hike', 'trial', 'unused'].includes(kind);
+            const flagged = !reviewDecisions[s.id] && ['hike', 'trial'].includes(kind);
             const label = chosenByUser ? 'Chosen by you' : reviewDecisions[s.id] === 'review' ? 'Review later' : flagged ? s.status?.label : 'Active';
             return (
               <article
@@ -231,7 +229,6 @@ export default function CancelGuide() {
     const map = {
       hike: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
       trial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      unused: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
       active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
       ended: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
     };
@@ -242,15 +239,14 @@ export default function CancelGuide() {
     const map = {
       hike: 'trending_up',
       trial: 'new_releases',
-      unused: 'visibility_off',
       active: 'check_circle',
       ended: 'cancel'
     };
     return map[kind] || 'help';
   }
 
-  const statusKind = sub.status?.kind || 'active';
-  const statusLabel = sub.status?.label || 'Active';
+  const statusKind = ['unused', 'unknown'].includes(sub.status?.kind) ? 'active' : sub.status?.kind || 'active';
+  const statusLabel = statusKind === 'active' ? 'Active' : sub.status?.label || 'Active';
 
   async function handleCopy() {
     try {

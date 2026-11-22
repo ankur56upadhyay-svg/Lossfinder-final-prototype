@@ -1,17 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attentionRank, potentialSavings, reportCsv } from './dashboardView.js';
+import { attentionRank, reportCsv } from './dashboardView.js';
 
-test('attention sorts hikes, unused, active and ended', () => {
-  const kinds = ['active', 'ended', 'unused', 'hike'];
-  assert.deepEqual(kinds.sort((a,b) => attentionRank({status:{kind:a}}) - attentionRank({status:{kind:b}})), ['hike','unused','active','ended']);
-});
-
-test('potential savings uses hike difference and likely unused annual cost', () => {
-  assert.equal(potentialSavings([
-    { price: 649, was: 499, per: 'mo', status: {kind:'hike'} },
-    { price: 1850, per: 'mo', status: {kind:'unused'} }
-  ]), 24000);
+test('attention sorts hikes and trials before active and ended', () => {
+  const kinds = ['active', 'ended', 'trial', 'hike'];
+  assert.deepEqual(kinds.sort((a,b) => attentionRank({status:{kind:a}}) - attentionRank({status:{kind:b}})), ['hike','trial','active','ended']);
 });
 
 test('report quotes merchant names and has Indian rupee values as numeric columns', () => {

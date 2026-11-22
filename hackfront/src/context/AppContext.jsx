@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useLossFinderApi } from '../hooks/useLossFinderApi';
 import { api } from '../services/api';
-import { parseCSV, parseUsageCSV } from '../engine/parse';
+import { parseCSV } from '../engine/parse';
 import { enrichTransactions } from '../engine/merchants';
 import { findRecurring } from '../engine/recurring';
 import { applyFlags } from '../engine/flags';
 import { computeTotals } from '../engine/totals';
 import { assessPayment, countsAsSubscription } from '../engine/paymentAssessment';
-import { DEMO_SUBSCRIPTIONS, SAMPLE_STATEMENT_CSV, SAMPLE_USAGE_CSV } from '../data/demoData';
+import { DEMO_SUBSCRIPTIONS, SAMPLE_STATEMENT_CSV } from '../data/demoData';
 import { AA_DEMO_ACCOUNTS, buildAaDemoTransactions } from '../data/aaDemoData';
 
 const AppContext = createContext(null);
@@ -285,6 +285,8 @@ export function AppProvider({ children }) {
     setStatementCoverageDays(null);
   }, []);
 
+  const returnToIntro = useCallback(() => setIsGuest(false), []);
+
   // Load sample data
   const loadSampleData = useCallback(() => {
     setIsGuest(true);
@@ -301,7 +303,7 @@ export function AppProvider({ children }) {
 
   const loadAccountAggregatorDemo = useCallback((accountIds) => {
     const rawRows = buildAaDemoTransactions(accountIds);
-    const flagged = applyFlags(findRecurring(enrichTransactions(rawRows)), []);
+    const flagged = applyFlags(findRecurring(enrichTransactions(rawRows)));
     const bankCount = accountIds.length;
     setIsGuest(!user);
     setIsDemo(true);
@@ -319,7 +321,7 @@ export function AppProvider({ children }) {
   }, [user, showToast]);
 
   // Analyze normalized statement rows from CSV or PDF (either Guest or Authenticated)
-  const analyzeStatement = useCallback(async (bankFiles, usageCsvText) => {
+  const analyzeStatement = useCallback(async (bankFiles) => {
     const files = Array.isArray(bankFiles) ? bankFiles : [{ name: 'Statement', text: bankFiles }];
     const parsed = files.map(file => ({ name: file.name, transactions: file.transactions || parseCSV(file.text) }));
     const seen = new Set();
@@ -339,16 +341,10 @@ export function AppProvider({ children }) {
 
     const detectedBank = files.length > 1 ? `${files.length} bank statements` : (parsed[0]?.transactions.bank || files[0]?.name || 'Uploaded Bank Statement');
 
-    // 2. Client-side parse optional usage log if provided
-    let usageEvents = [];
-    if (usageCsvText && usageCsvText.trim()) {
-      usageEvents = parseUsageCSV(usageCsvText);
-    }
-
-    // 3. Client-side enrichment and recurring analysis
+    // Client-side enrichment and recurring analysis
     const enriched = enrichTransactions(rawTxns);
     const recurring = findRecurring(enriched);
-    const flagged = applyFlags(recurring, usageEvents);
+    const flagged = applyFlags(recurring);
 
     if (user) {
       // Authenticated Mode: Send normalized transactions to Neo4j
@@ -425,6 +421,7 @@ export function AppProvider({ children }) {
         navigateTo,
         isGuest,
         startGuestMode,
+        returnToIntro,
         subscriptions: visibleSubscriptions,
         paymentCandidates,
         classifyPayment,

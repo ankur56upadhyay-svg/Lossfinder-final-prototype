@@ -29,6 +29,9 @@ export default function Upload() {
     user,
     isGuest,
     startGuestMode,
+    returnToIntro,
+    navigateTo,
+    subscriptions,
     openAuthModal,
     analyzeStatement,
     loadSampleData,
@@ -40,17 +43,12 @@ export default function Upload() {
 
   // File state
   const [bankFiles, setBankFiles] = useState([]);
-  const [usageFile, setUsageFile] = useState(null);
-  const [usageCsvText, setUsageCsvText] = useState('');
 
   // Info toggles
   const [showBankHelp, setShowBankHelp] = useState(false);
-  const [showUsageHelp, setShowUsageHelp] = useState(false);
-  const [showUsageUpload, setShowUsageUpload] = useState(false);
 
   // Drag states
   const [bankDragOver, setBankDragOver] = useState(false);
-  const [usageDragOver, setUsageDragOver] = useState(false);
 
   // Loading & error
   const [loading, setLoading] = useState(false);
@@ -58,7 +56,6 @@ export default function Upload() {
 
   // File input refs
   const bankInputRef = useRef(null);
-  const usageInputRef = useRef(null);
 
   // File handlers
   async function handleBankFileSelect(files) {
@@ -104,37 +101,10 @@ export default function Upload() {
     }
   }
 
-  function handleUsageFileSelect(file) {
-    if (!file) return;
-    if (file.size > MAX_FILE_BYTES) {
-      setError('Usage log exceeds the 5 MB file limit.');
-      return;
-    }
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      setError('Usage log must be a .csv file.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setUsageFile(file);
-      setUsageCsvText(e.target.result);
-      setError('');
-    };
-    reader.readAsText(file);
-  }
-
   function clearBankFile(e, name) {
     e?.stopPropagation();
     setBankFiles(previous => previous.filter(file => file.name !== name));
     if (bankInputRef.current) bankInputRef.current.value = '';
-  }
-
-  function clearUsageFile(e) {
-    e?.stopPropagation();
-    setUsageFile(null);
-    setUsageCsvText('');
-    if (usageInputRef.current) usageInputRef.current.value = '';
   }
 
   async function handleAnalyze() {
@@ -151,7 +121,7 @@ export default function Upload() {
     setLoading(true);
 
     try {
-      await analyzeStatement(bankFiles, usageCsvText);
+      await analyzeStatement(bankFiles);
       if (!user) {
         try {
           localStorage.setItem(GUEST_QUOTA_KEY, JSON.stringify([...guestUploadTimes(), ...bankFiles.map(() => Date.now())]));
@@ -202,6 +172,9 @@ export default function Upload() {
       <main className="flex-1 flex flex-col items-center justify-center w-full">
         <div className="lf-upload-content w-full max-w-[590px] mx-auto px-4 sm:px-6 py-8 flex flex-col items-center text-center">
 
+      <button type="button" className="lf-upload-back" onClick={() => user ? navigateTo('history') : subscriptions.length ? navigateTo('dashboard') : (returnToIntro(), setShowUploadBoxes(false))}>
+        <span className="material-symbols-outlined" aria-hidden="true">arrow_back</span>{user ? 'Back to my analyses' : subscriptions.length ? 'Back to dashboard' : 'Back to home'}
+      </button>
       <h1 className="lf-upload-title text-2xl sm:text-3xl font-bold tracking-tight text-[#0F172A] dark:text-[#F1F5F9] mb-3">
         Upload your statements
       </h1>
@@ -349,86 +322,6 @@ export default function Upload() {
             <span className="material-symbols-outlined text-base">visibility</span>
             Try demo statement
           </button>}
-
-          <button type="button" className="lf-optional-toggle" onClick={() => setShowUsageUpload(value => !value)} aria-expanded={showUsageUpload}>
-            <span className="material-symbols-outlined text-base">add</span>{showUsageUpload ? 'Hide optional usage log' : usageFile ? `Usage log selected: ${usageFile.name}` : 'Add usage log (optional)'}
-          </button>
-          {/* Usage CSV Dropzone (Optional) */}
-          {showUsageUpload && <div className="mb-5">
-            <div className="flex items-center justify-between gap-1.5 mb-2">
-              <label className="block text-xs font-semibold text-[#5A6B80] dark:text-[#8899AA] uppercase tracking-wider">
-                Usage Log CSV <span className="text-xs font-normal lowercase">(optional)</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowUsageHelp(prev => !prev)}
-                className="text-[#0B5FD8] dark:text-[#4D9AFF] hover:opacity-80 transition-opacity flex items-center"
-                title="Where to get usage logs"
-              >
-                <span className="material-symbols-outlined text-[16px]">info</span>
-              </button>
-            </div>
-
-            {/* Instruction Help Box */}
-            {showUsageHelp && (
-              <div className="mb-3 p-3.5 rounded-xl bg-blue-50 dark:bg-[#0B5FD8]/10 border border-blue-100 dark:border-[#0B5FD8]/20 text-xs text-left animate-fadeIn">
-                <p className="font-semibold text-[#0B1F3A] dark:text-[#E8ECF1] mb-1.5">
-                  Where to find activity logs:
-                </p>
-                <ul className="list-disc pl-4 space-y-1 text-[#5A6B80] dark:text-[#8899AA]">
-                  <li><strong>Apple / iOS:</strong> Export reports via Screen Time settings.</li>
-                  <li><strong>Google / Android:</strong> Use Google Takeout to export YouTube or app history.</li>
-                  <li><strong>Streaming (Netflix, etc.):</strong> Download "Viewing Activity" from account settings.</li>
-                  <li><strong>Physical Gyms:</strong> Request a check-in export from front desk.</li>
-                </ul>
-              </div>
-            )}
-
-            {/* Secondary Dropzone */}
-            <div
-              onClick={() => usageInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setUsageDragOver(true); }}
-              onDragLeave={() => setUsageDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setUsageDragOver(false);
-                if (e.dataTransfer.files?.[0]) handleUsageFileSelect(e.dataTransfer.files[0]);
-              }}
-              className={`af-dropzone lf-upload-usage-dropzone flex items-center justify-center gap-3 py-3 px-4 transition-colors ${
-                usageDragOver ? 'active' : ''
-              }`}
-            >
-              <input
-                ref={usageInputRef}
-                type="file"
-                accept=".csv,text/csv"
-                onChange={(e) => e.target.files?.[0] && handleUsageFileSelect(e.target.files[0])}
-                className="hidden"
-              />
-              <span className="material-symbols-outlined text-xl text-[#5A6B80] dark:text-[#8899AA]">
-                history
-              </span>
-
-              {!usageFile ? (
-                <div className="text-xs text-[#5A6B80] dark:text-[#8899AA]">
-                  <span className="text-[#0B5FD8] dark:text-[#4D9AFF] font-semibold underline">Upload usage log</span> for dormancy &amp; waste insights
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md text-xs font-medium">
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
-                  <span className="truncate max-w-[180px]">{usageFile.name}</span>
-                  <button
-                    type="button"
-                    onClick={clearUsageFile}
-                    className="text-xs underline text-gray-500 hover:text-red-600 focus:outline-none"
-                    title="Remove file"
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>}
 
           {/* Upload & Analyze Action or Spinner */}
           {!loading ? (

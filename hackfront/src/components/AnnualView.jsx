@@ -102,9 +102,7 @@ function getSavingsOpportunities(subs, mode) {
   for (const s of subs) {
     const kind = s.status?.kind || 'unknown';
     const spend = getAdjusted(s, mode);
-    if (kind === 'unknown') {
-      opps.push({ sub: s, tag: 'Unknown Usage', tagClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300', desc: 'No usage records uploaded. Upload a usage CSV to check if you are actively using this membership.', spend, action: 'detail' });
-    } else if (kind === 'trial') {
+    if (kind === 'trial') {
       opps.push({ sub: s, tag: 'Trial Conversion', tagClass: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300', desc: 'Converted from an introductory trial to full monthly billing. Re-evaluate if still needed.', spend, action: 'guide' });
     } else if (kind === 'ended') {
       opps.push({ sub: s, tag: 'Ended Service', tagClass: 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300', desc: 'No charges found in 4+ months. Verify your account to ensure no unexpected residual mandates trigger.', spend: 0, action: 'detail' });

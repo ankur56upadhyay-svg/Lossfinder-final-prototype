@@ -94,20 +94,6 @@ export const api = {
     })
   },
 
-  usage: {
-    list: (merchantKey) => {
-      const qs = merchantKey ? `?merchantKey=${encodeURIComponent(merchantKey)}` : '';
-      return request(`/api/usage${qs}`);
-    },
-    create: (data) => request('/api/usage', {
-      method: 'POST',
-      body: JSON.stringify(data)
-    }),
-    delete: (id) => request(`/api/usage/${encodeURIComponent(id)}`, {
-      method: 'DELETE'
-    })
-  },
-
   analytics: {
     summary: () => request('/api/analytics/summary'),
     monthly: () => request('/api/analytics/monthly'),

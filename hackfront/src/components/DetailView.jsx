@@ -38,14 +38,13 @@ export default function DetailView() {
   }
 
   const isCancelled = !!cancelledMap[sub.id];
-  const statusKind = sub.status?.kind || 'active';
-  const statusLabel = sub.status?.label || 'Active';
+  const statusKind = ['unused', 'unknown'].includes(sub.status?.kind) ? 'active' : sub.status?.kind || 'active';
+  const statusLabel = statusKind === 'active' ? 'Active' : sub.status?.label || 'Active';
 
   function getStatusClasses(kind) {
     const map = {
       hike: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
       trial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      unused: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
       active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
       ended: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
     };
@@ -56,7 +55,6 @@ export default function DetailView() {
     const map = {
       hike: 'trending_up',
       trial: 'new_releases',
-      unused: 'visibility_off',
       active: 'check_circle',
       ended: 'cancel'
     };
