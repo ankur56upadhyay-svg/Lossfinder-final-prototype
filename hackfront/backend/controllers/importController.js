@@ -1,34 +1,42 @@
 const importService = require('../services/importService');
 const importRepository = require('../repositories/importRepository');
-const subscriptionDetectionService = require('../services/subscriptionDetectionService');
+const transactionRepository = require('../repositories/transactionRepository');
 const subscriptionRepository = require('../repositories/subscriptionRepository');
 
 async function loadAnalysis(userId, importId) {
   const item = await importRepository.getImportById(userId, importId);
   if (!item) return null;
 
+  let previousSnapshot = null;
   if (item.analysisJson) {
     try {
       const subscriptions = JSON.parse(item.analysisJson);
-      if (Array.isArray(subscriptions)) return { item, subscriptions };
+      if (Array.isArray(subscriptions)) {
+        if (item.analysisVersion === 2) return { item, subscriptions };
+        previousSnapshot = subscriptions;
+      }
     } catch (_) {
       // Older or incomplete imports can be reconstructed from their own transactions.
     }
   }
 
-  const detected = await subscriptionDetectionService.analyzeForUser(userId, { importId, persist: false });
+  const rows = await transactionRepository.getAllDebitTransactionsByUser(userId, importId);
+  if (!rows.length && previousSnapshot) return { item, subscriptions: previousSnapshot };
+  const { analyzeTransactions, dedupeStatementTransactions, formatStatementTransactions } = await import('../../src/engine/analysis.js');
+  const detected = analyzeTransactions(dedupeStatementTransactions(formatStatementTransactions(rows)));
   // Existing accounts used to store decisions per user. Carry them over only when
   // there is one older import, where their source analysis is unambiguous.
   const imports = await importRepository.getImportsByUser(userId);
-  const previous = imports.length === 1
+  const previous = previousSnapshot || (imports.length === 1
     ? await subscriptionRepository.getSubscriptionsByUser(userId)
-    : [];
+    : []);
   const previousByMerchant = new Map(previous.map(sub => [sub.id, sub]));
   const subscriptions = detected.map(sub => ({
     ...sub,
     id: sub.merchantKey,
     reviewDecision: previousByMerchant.get(sub.merchantKey)?.reviewDecision || null,
-    cancelled: previousByMerchant.get(sub.merchantKey)?.userOverrideStatus === 'ended'
+    cancelled: previousByMerchant.get(sub.merchantKey)?.cancelled || previousByMerchant.get(sub.merchantKey)?.userOverrideStatus === 'ended',
+    classificationDecision: previousByMerchant.get(sub.merchantKey)?.classificationDecision || null
   }));
   await importRepository.saveAnalysisSnapshot(userId, importId, subscriptions);
   return { item, subscriptions };

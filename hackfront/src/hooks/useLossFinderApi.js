@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '../services/api';
+import { formatStatementTransactions } from '../engine/analysis';
 
 export function useLossFinderApi() {
   const [user, setUser] = useState(null);
@@ -89,17 +90,7 @@ export function useLossFinderApi() {
     setApiLoading(true);
     setApiError(null);
     try {
-      const formatted = transactions.map(t => ({
-        transactionDate: t.transactionDate || (t.date instanceof Date ? t.date.toISOString().slice(0, 10) : String(t.date).slice(0, 10)),
-        description: t.narration || t.description || 'Debit',
-        amount: Number(t.amount || t.debit || 0),
-        direction: t.direction || 'debit',
-        currency: 'INR',
-        ref: t.ref || '',
-        method: t.mech || '',
-        status: t.direction === 'credit' ? 'CREDIT' : 'DEBIT',
-        sourceFileIndex: t.sourceFileIndex
-      }));
+      const formatted = formatStatementTransactions(transactions);
 
       const res = await api.imports.create({
         bankName: bankName || 'Your Bank',

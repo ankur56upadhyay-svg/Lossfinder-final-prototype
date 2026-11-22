@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const importRepository = require('../repositories/importRepository');
 const transactionRepository = require('../repositories/transactionRepository');
-const subscriptionDetectionService = require('./subscriptionDetectionService');
 const { computeRowHash } = require('../utils/fingerprint');
 const { findMerchant, determineMechanism } = require('../utils/merchants');
 const logger = require('../utils/logger');
@@ -151,9 +150,10 @@ const importService = {
       rejectedCount
     });
 
-    // 5. Save results scoped to this import so later uploads cannot change this analysis.
+    // 5. Re-run the same detector as guest mode on the accepted, saved rows.
     try {
-      const detected = await subscriptionDetectionService.analyzeForUser(userId, { importId, persist: false });
+      const { analyzeTransactions } = await import('../../src/engine/analysis.js');
+      const detected = analyzeTransactions(toInsert);
       const classifications = await importRepository.getClassificationPreferences(userId);
       await importRepository.saveAnalysisSnapshot(userId, importId, detected.map(sub => ({
         ...sub,

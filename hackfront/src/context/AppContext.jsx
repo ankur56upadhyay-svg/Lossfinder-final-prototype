@@ -7,6 +7,7 @@ import { findRecurring } from '../engine/recurring';
 import { applyFlags } from '../engine/flags';
 import { computeTotals } from '../engine/totals';
 import { assessPayment, countsAsSubscription } from '../engine/paymentAssessment';
+import { analyzeTransactions, dedupeStatementTransactions, formatStatementTransactions } from '../engine/analysis';
 import { DEMO_SUBSCRIPTIONS, SAMPLE_STATEMENT_CSV } from '../data/demoData';
 import { AA_DEMO_ACCOUNTS, buildAaDemoTransactions } from '../data/aaDemoData';
 
@@ -324,40 +325,30 @@ export function AppProvider({ children }) {
   const analyzeStatement = useCallback(async (bankFiles) => {
     const files = Array.isArray(bankFiles) ? bankFiles : [{ name: 'Statement', text: bankFiles }];
     const parsed = files.map(file => ({ name: file.name, transactions: file.transactions || parseCSV(file.text) }));
-    const seen = new Set();
-    const rawTxns = parsed.flatMap((file, sourceFileIndex) => file.transactions.map(tx => ({ ...tx, sourceFileIndex }))).filter(tx => {
-      const ref = tx.ref?.trim();
-      if (!ref) return true;
-      const key = [tx.transactionDate, tx.direction, tx.amount, tx.deposit, tx.narration?.trim().toLowerCase(), ref].join('|');
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-    if (!rawTxns || !rawTxns.length) {
+    const rawTxns = parsed.flatMap((file, sourceFileIndex) => file.transactions.map(tx => ({ ...tx, sourceFileIndex })));
+    const normalized = dedupeStatementTransactions(formatStatementTransactions(rawTxns));
+    if (!normalized.length) {
       throw new Error('We could not read any transactions from this statement. Please check the file format.');
     }
-    const dates = rawTxns.map(tx => new Date(tx.transactionDate).getTime()).filter(Number.isFinite);
+    const dates = normalized.map(tx => new Date(tx.transactionDate).getTime()).filter(Number.isFinite);
     const coverageDays = dates.length ? Math.round((Math.max(...dates) - Math.min(...dates)) / 86400000) : null;
 
     const detectedBank = files.length > 1 ? `${files.length} bank statements` : (parsed[0]?.transactions.bank || files[0]?.name || 'Uploaded Bank Statement');
 
-    // Client-side enrichment and recurring analysis
-    const enriched = enrichTransactions(rawTxns);
-    const recurring = findRecurring(enriched);
-    const flagged = applyFlags(recurring);
+    const flagged = analyzeTransactions(normalized);
 
     if (user) {
       // Authenticated Mode: Send normalized transactions to Neo4j
       let imported;
       try {
-        imported = await importToNeo4j(detectedBank, enriched, files.map(file => file.name));
+        imported = await importToNeo4j(detectedBank, normalized, files.map(file => file.name));
       } catch (err) {
         throw new Error(`Could not save the new analysis: ${err.message}`);
       }
       refreshAnalysisHistory().catch(() => {});
       try {
         await openAnalysis(imported.importId);
-        showToast(`New analysis saved with ${imported.acceptedCount ?? enriched.length} transactions.`);
+        showToast(`New analysis saved with ${imported.acceptedCount ?? normalized.length} transactions.`);
       } catch (err) {
         setView('history');
         setHistoryError('Your statement was saved, but its results could not be opened. Retry from My analyses.');

@@ -9,7 +9,7 @@ process.env.COOKIE_SECURE = 'false';
 
 const app = require('../app');
 const importRepository = require('../repositories/importRepository');
-const subscriptionDetectionService = require('../services/subscriptionDetectionService');
+const transactionRepository = require('../repositories/transactionRepository');
 const subscriptionRepository = require('../repositories/subscriptionRepository');
 
 let server;
@@ -32,16 +32,16 @@ test('analysis history and decisions remain separated by owner and import', asyn
     get: importRepository.getImportById,
     save: importRepository.saveAnalysisSnapshot,
     setClassification: importRepository.setClassificationPreference,
-    detect: subscriptionDetectionService.analyzeForUser,
+    transactions: transactionRepository.getAllDebitTransactionsByUser,
     priorSubscriptions: subscriptionRepository.getSubscriptionsByUser
   };
   const rows = new Map([
-    ['imp_first', { importId: 'imp_first', owner: 'usr_one', bankName: 'First bank', analysisJson: JSON.stringify([{ id: 'netflix', merchantKey: 'netflix', name: 'Netflix', reviewDecision: null, cancelled: false }]) }],
-    ['imp_second', { importId: 'imp_second', owner: 'usr_one', bankName: 'Second bank', analysisJson: JSON.stringify([{ id: 'spotify', merchantKey: 'spotify', name: 'Spotify', reviewDecision: null, cancelled: false }]) }],
-    ['imp_other', { importId: 'imp_other', owner: 'usr_other', bankName: 'Other bank', analysisJson: '[]' }],
+    ['imp_first', { importId: 'imp_first', owner: 'usr_one', bankName: 'First bank', analysisVersion: 2, analysisJson: JSON.stringify([{ id: 'netflix', merchantKey: 'netflix', name: 'Netflix', reviewDecision: null, cancelled: false }]) }],
+    ['imp_second', { importId: 'imp_second', owner: 'usr_one', bankName: 'Second bank', analysisVersion: 2, analysisJson: JSON.stringify([{ id: 'spotify', merchantKey: 'spotify', name: 'Spotify', reviewDecision: null, cancelled: false }]) }],
+    ['imp_other', { importId: 'imp_other', owner: 'usr_other', bankName: 'Other bank', analysisVersion: 2, analysisJson: '[]' }],
     ['imp_legacy', { importId: 'imp_legacy', owner: 'usr_one', bankName: 'Older bank', analysisJson: null }]
   ]);
-  const detectedIds = [];
+  const loadedImports = [];
   importRepository.getImportsByUser = async userId => [...rows.values()]
     .filter(item => item.owner === userId)
     .map(({ analysisJson, owner, ...item }) => item);
@@ -53,6 +53,7 @@ test('analysis history and decisions remain separated by owner and import', asyn
     const item = rows.get(id);
     if (item?.owner !== userId) return false;
     item.analysisJson = JSON.stringify(subs);
+    item.analysisVersion = 2;
     return true;
   };
   const preferences = {};
@@ -62,13 +63,15 @@ test('analysis history and decisions remain separated by owner and import', asyn
     else preferences[key] = choice;
     return true;
   };
-  subscriptionDetectionService.analyzeForUser = async (userId, options) => {
-    detectedIds.push([userId, options]);
-    return [{ merchantKey: 'cloud', name: 'Cloud storage' }];
+  transactionRepository.getAllDebitTransactionsByUser = async (userId, importId) => {
+    loadedImports.push([userId, importId]);
+    return ['2026-08-01', '2026-09-01', '2026-10-01'].map(date => ({
+      date, narration: 'GOOGLE ONE AUTOPAY', debit: 130, amount: 130, direction: 'debit', ref: date
+    }));
   };
   subscriptionRepository.getSubscriptionsByUser = async userId => {
     assert.equal(userId, 'usr_one');
-    return [{ id: 'cloud', reviewDecision: 'keep', userOverrideStatus: 'ended' }];
+    return [{ id: 'google-one', reviewDecision: 'keep', userOverrideStatus: 'ended' }];
   };
 
   const token = jwt.sign({ userId: 'usr_one', email: 'one@example.com' }, process.env.JWT_SECRET);
@@ -131,15 +134,27 @@ test('analysis history and decisions remain separated by owner and import', asyn
     rows.delete('imp_first');
     rows.delete('imp_second');
     const legacy = await fetch(url('/imp_legacy/analysis'), { headers });
-    assert.deepEqual((await legacy.json()).subs.map(sub => [sub.id, sub.reviewDecision, sub.cancelled]), [['cloud', 'keep', true]]);
-    assert.deepEqual(detectedIds, [['usr_one', { importId: 'imp_legacy', persist: false }]]);
+    assert.deepEqual((await legacy.json()).subs.map(sub => [sub.id, sub.reviewDecision, sub.cancelled]), [['google-one', 'keep', true]]);
+    assert.deepEqual(loadedImports, [['usr_one', 'imp_legacy']]);
     assert.ok(rows.get('imp_legacy').analysisJson);
+    assert.equal(rows.get('imp_legacy').analysisVersion, 2);
+
+    rows.get('imp_legacy').analysisVersion = null;
+    rows.get('imp_legacy').analysisJson = JSON.stringify([{
+      id: 'google-one', merchantKey: 'google-one', reviewDecision: 'review',
+      cancelled: true, classificationDecision: 'subscription', price: 999
+    }]);
+    const migrated = await fetch(url('/imp_legacy/analysis'), { headers });
+    const migratedSub = (await migrated.json()).subs[0];
+    assert.deepEqual([migratedSub.price, migratedSub.reviewDecision, migratedSub.cancelled, migratedSub.classificationDecision],
+      [130, 'review', true, 'subscription']);
+    assert.equal(rows.get('imp_legacy').analysisVersion, 2);
   } finally {
     importRepository.getImportsByUser = originals.list;
     importRepository.getImportById = originals.get;
     importRepository.saveAnalysisSnapshot = originals.save;
     importRepository.setClassificationPreference = originals.setClassification;
-    subscriptionDetectionService.analyzeForUser = originals.detect;
+    transactionRepository.getAllDebitTransactionsByUser = originals.transactions;
     subscriptionRepository.getSubscriptionsByUser = originals.priorSubscriptions;
   }
 });

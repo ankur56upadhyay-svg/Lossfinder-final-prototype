@@ -100,7 +100,7 @@ const importRepository = {
          RETURN i.importId AS importId, i.importedAt AS importedAt, i.transactionCount AS transactionCount,
                 i.dateRangeStart AS dateRangeStart, i.dateRangeEnd AS dateRangeEnd, i.status AS status,
                 i.bankName AS bankName, i.fileNames AS fileNames,
-                i.analysisJson AS analysisJson
+                i.analysisJson AS analysisJson, i.analysisVersion AS analysisVersion
          LIMIT 1`,
         { userId, importId }
       );
@@ -115,7 +115,8 @@ const importRepository = {
         status: rec.get('status'),
         bankName: rec.get('bankName'),
         fileNames: rec.get('fileNames') || [],
-        analysisJson: rec.get('analysisJson')
+        analysisJson: rec.get('analysisJson'),
+        analysisVersion: rec.get('analysisVersion')?.toNumber?.() ?? rec.get('analysisVersion')
       };
     } finally {
       await session.close();
@@ -168,7 +169,7 @@ const importRepository = {
     try {
       const result = await session.run(
         `MATCH (u:User { userId: $userId })-[:CREATED_IMPORT]->(i:ImportBatch { importId: $importId })
-         SET i.analysisJson = $analysisJson
+         SET i.analysisJson = $analysisJson, i.analysisVersion = 2
          RETURN i.importId AS importId`,
         { userId, importId, analysisJson: JSON.stringify(subscriptions) }
       );
