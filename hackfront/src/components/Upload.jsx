@@ -24,10 +24,23 @@ function guestUploadTimes() {
   }
 }
 
+function ThemeToggle({ theme, toggleTheme, className = '' }) {
+  const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  return (
+    <button type="button" className={`lf-standalone-theme ${className}`} onClick={toggleTheme}
+      aria-label={`Switch to ${nextTheme} mode`} title={`Switch to ${nextTheme} mode`}>
+      <span className="material-symbols-outlined" aria-hidden="true">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+    </button>
+  );
+}
+
 export default function Upload() {
   const {
     user,
     isGuest,
+    subscriptions,
+    theme,
+    toggleTheme,
     startGuestMode,
     returnToIntro,
     navigateTo,
@@ -155,6 +168,7 @@ export default function Upload() {
         <div className="lf-landing-brand" aria-label="Loss Finder">
           <span className="lf-landing-brand-icon material-symbols-outlined" aria-hidden="true">account_balance_wallet</span>
           <span>Loss Finder</span>
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} className="lf-landing-theme" />
         </div>
         <main className="lf-landing-main">
           <div className="lf-landing-content">
@@ -183,6 +197,7 @@ export default function Upload() {
 
   return (
     <div className="lf-upload-page min-h-[calc(100vh-64px)] flex flex-col">
+      {!user && !subscriptions.length && <ThemeToggle theme={theme} toggleTheme={toggleTheme} className="lf-upload-theme" />}
       {/* Main centered content */}
       <main className="flex-1 flex flex-col items-center justify-center w-full">
         <div className="lf-upload-content w-full max-w-[590px] mx-auto px-4 sm:px-6 py-8 flex flex-col items-center text-center">

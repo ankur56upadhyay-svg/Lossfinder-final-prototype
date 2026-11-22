@@ -1,4 +1,5 @@
-.lf-upload-page { background: transparent; }
+.lf-upload-page { position: relative; background: transparent; }
+.lf-upload-theme { position: absolute; top: 16px; right: max(16px, calc((100vw - 1120px) / 2)); z-index: 2; }
 .lf-no-nav .lf-upload-page { min-height: 100svh; }
 .lf-upload-page > main { justify-content: flex-start; }
 .lf-upload-content { max-width: 590px; padding: 8px 0 16px; }

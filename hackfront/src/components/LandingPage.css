@@ -51,6 +51,27 @@
   font-size: 24px;
 }
 
+.lf-standalone-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(15, 23, 42, .14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .65);
+  color: #475569;
+  cursor: pointer;
+  transition: color 150ms ease-out, background 150ms ease-out, border-color 150ms ease-out;
+}
+
+.lf-standalone-theme:hover { background: #fff; color: #0f172a; }
+.lf-standalone-theme:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+.lf-standalone-theme .material-symbols-outlined { font-size: 22px; }
+.dark .lf-standalone-theme { background: rgba(255, 255, 255, .05); border-color: rgba(255, 255, 255, .12); color: #cbd5e1; }
+.dark .lf-standalone-theme:hover { background: rgba(255, 255, 255, .1); color: #f3f4f6; }
+.lf-landing-theme { margin-left: auto; }
+
 @media (max-width: 600px) {
   .lf-landing-brand { padding: 16px; font-size: 18px; }
 }
