@@ -25,6 +25,36 @@
   color: #f1f5f9;
 }
 
+.lf-landing-brand {
+  position: relative;
+  z-index: 3;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: inherit;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.lf-landing-brand-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 24px;
+}
+
+@media (max-width: 600px) {
+  .lf-landing-brand { padding: 16px; font-size: 18px; }
+}
+
 .lf-landing .af-landing-backdrop-root {
   position: absolute;
 }

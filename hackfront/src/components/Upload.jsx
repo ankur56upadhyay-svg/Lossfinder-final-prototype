@@ -31,7 +31,6 @@ export default function Upload() {
     startGuestMode,
     returnToIntro,
     navigateTo,
-    subscriptions,
     openAuthModal,
     analyzeStatement,
     loadSampleData,
@@ -136,11 +135,27 @@ export default function Upload() {
     }
   }
 
+  function handleBack() {
+    if (user) {
+      navigateTo('history');
+      return;
+    }
+    returnToIntro();
+    setShowUploadBoxes(false);
+    setBankFiles([]);
+    setError('');
+    if (bankInputRef.current) bankInputRef.current.value = '';
+  }
+
   if (!showUploadBoxes && !user) {
     return (
       <div className="lf-landing">
         <LandingBackdrop />
         <CursorGlow />
+        <div className="lf-landing-brand" aria-label="Loss Finder">
+          <span className="lf-landing-brand-icon material-symbols-outlined" aria-hidden="true">account_balance_wallet</span>
+          <span>Loss Finder</span>
+        </div>
         <main className="lf-landing-main">
           <div className="lf-landing-content">
             <h1 className="lf-landing-title">
@@ -172,8 +187,8 @@ export default function Upload() {
       <main className="flex-1 flex flex-col items-center justify-center w-full">
         <div className="lf-upload-content w-full max-w-[590px] mx-auto px-4 sm:px-6 py-8 flex flex-col items-center text-center">
 
-      <button type="button" className="lf-upload-back" onClick={() => user ? navigateTo('history') : subscriptions.length ? navigateTo('dashboard') : (returnToIntro(), setShowUploadBoxes(false))}>
-        <span className="material-symbols-outlined" aria-hidden="true">arrow_back</span>{user ? 'Back to my analyses' : subscriptions.length ? 'Back to dashboard' : 'Back to home'}
+      <button type="button" className="lf-upload-back" onClick={handleBack}>
+        <span className="material-symbols-outlined" aria-hidden="true">arrow_back</span>{user ? 'Back to my analyses' : 'Back to home'}
       </button>
       <h1 className="lf-upload-title text-2xl sm:text-3xl font-bold tracking-tight text-[#0F172A] dark:text-[#F1F5F9] mb-3">
         Upload your statements
